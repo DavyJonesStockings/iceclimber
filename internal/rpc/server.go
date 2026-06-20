@@ -1,23 +1,24 @@
 package rpc
 
 import (
+	"fmt"
 	"log"
 	"net"
+	"reflect"
 
-	"github.com/msgpack-rpc/msgpack-rpc-go/rpc"
+	msgpackrpc "github.com/msgpack-rpc/msgpack-rpc-go/rpc"
 )
 
-type Event struct {
-	Widths []int
+type methodResolver struct {
+	receiver reflect.Value
 }
 
-type Server struct {
-	cb func(Event)
-}
-
-func (s *Server) SendWidths(widths []int) error {
-	s.cb(Event{Widths: widths})
-	return nil
+func (r *methodResolver) Resolve(name string, args []reflect.Value) (reflect.Value, error) {
+	method := r.receiver.MethodByName(name)
+	if !method.IsValid() {
+		return reflect.Value{}, fmt.Errorf("unknown method: %s", name)
+	}
+	return method, nil
 }
 
 func Start(cb func(Event)) {
@@ -26,10 +27,13 @@ func Start(cb func(Event)) {
 		log.Fatal(err)
 	}
 
-	server := rpc.NewServer()
-	server.Register(&Server{cb: cb})
+	handler := &Server{cb: cb}
+	resolver := &methodResolver{receiver: reflect.ValueOf(handler)}
+
+	server := msgpackrpc.NewServer(resolver, true, nil)
+	server.Listen(ln)
 
 	log.Println("RPC listening on", ln.Addr())
 
-	server.Accept(ln)
+	server.Run()
 }
