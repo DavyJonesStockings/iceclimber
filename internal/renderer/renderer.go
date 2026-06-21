@@ -1,16 +1,22 @@
 package renderer
 
 import (
+	"fmt"
+
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
+	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 
 	"iceclimber.app/internal/rpc"
 )
 
+var (
+	screenWidth  = 2000
+	screenHeight = 1440
+)
+
 const (
-	screenWidth  = 2880
-	screenHeight = 1800
-	step         = 10
+	step = 5
 )
 
 type Renderer struct {
@@ -34,6 +40,15 @@ func New(app *gtk.Application) *Renderer {
 	win.ConnectRealize(func() {
 		disableInputRegion(&win.Window)
 	})
+	win.ConnectMap(func() {
+		w, h := win.Width(), win.Height()
+		fmt.Println("(early) screen size: ", w, h)
+
+		if w > 0 && h > 0 {
+			screenWidth, screenHeight = w, h
+		}
+		fmt.Println("screen size: ", screenWidth, screenHeight)
+	})
 
 	canvas := NewCanvas()
 
@@ -53,35 +68,53 @@ func New(app *gtk.Application) *Renderer {
 	key := gtk.NewEventControllerKey()
 	key.ConnectKeyPressed(func(keyval, keycode uint, state gdk.ModifierType) bool {
 		pressedKeys[keyval] = true
-		var dx, dy int
 		switch keyval {
-		case gdk.KEY_h:
-			dx = -step
-			sprite.SetFacing(true)
-			sprite.SetState(StateWalk)
-		case gdk.KEY_l:
-			dx = step
-			sprite.SetFacing(false)
-			sprite.SetState(StateWalk)
-		case gdk.KEY_j:
-			dy = step
-		case gdk.KEY_k:
-			dy = -step
-		default:
-			return false
+		case gdk.KEY_h, gdk.KEY_l, gdk.KEY_j, gdk.KEY_k:
+			pressedKeys[keyval] = true
+			return true
 		}
-		canvas.MoveSprite(sprite, sprite.X+dx, sprite.Y+dy)
-		return true
+		return false
 	})
 
 	key.ConnectKeyReleased(func(keyval, keycode uint, state gdk.ModifierType) {
 		delete(pressedKeys, keyval)
-		if len(pressedKeys) == 0 {
-			sprite.SetState(StateIdle)
-		}
 	})
 
 	win.AddController(key)
+
+	const moveTickMs = 10
+	glib.TimeoutAdd(moveTickMs, func() bool {
+		var dx, dy int
+		moving := false
+
+		if pressedKeys[gdk.KEY_h] {
+			dx -= step
+			sprite.SetFacing(true)
+			moving = true
+		}
+		if pressedKeys[gdk.KEY_l] {
+			dx += step
+			sprite.SetFacing(false)
+			moving = true
+		}
+		if pressedKeys[gdk.KEY_j] {
+			dy += step
+		}
+		if pressedKeys[gdk.KEY_k] {
+			dy -= step
+		}
+
+		if moving {
+			sprite.SetState(StateWalk)
+		} else {
+			sprite.SetState(StateIdle)
+		}
+
+		if dx != 0 || dy != 0 {
+			canvas.MoveSprite(sprite, sprite.X+dx, sprite.Y+dy)
+		}
+		return true
+	})
 
 	css := gtk.NewCSSProvider()
 	css.LoadFromString("window { background: transparent; }")

@@ -65,6 +65,11 @@ func (s *Sprite) Tick() {
 	}
 }
 
+func (s *Sprite) Size() (int, int) {
+	first := s.animations[StateIdle][0]
+	return first.Width(), first.Height()
+}
+
 func (s *Sprite) draw(a *gtk.DrawingArea, cr *cairo.Context, width, height int) {
 	cr.SetOperator(cairo.OperatorSource)
 	cr.SetSourceRGBA(0, 0, 0, 0)

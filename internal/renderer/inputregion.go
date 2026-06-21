@@ -10,17 +10,29 @@ import (
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 )
 
-func disableInputRegion(win *gtk.Window) {
+func getSurface(win *gtk.Window) *C.GdkSurface {
 	widget := (*C.GtkWidget)(unsafe.Pointer(coreglib.InternObject(win).Native()))
 	native := C.gtk_widget_get_native(widget)
 	if native == nil {
-		return
+		return nil
 	}
-	surface := C.gtk_native_get_surface(native)
+	return C.gtk_native_get_surface(native)
+}
+
+func disableInputRegion(win *gtk.Window) {
+	surface := getSurface(win)
 	if surface == nil {
 		return
 	}
 	region := C.cairo_region_create()
 	C.gdk_surface_set_input_region(surface, region)
 	C.cairo_region_destroy(region)
+}
+
+func surfaceSize(win *gtk.Window) (int, int) {
+	surface := getSurface(win)
+	if surface == nil {
+		return 0, 0
+	}
+	return int(C.gdk_surface_get_width(surface)), int(C.gdk_surface_get_height(surface))
 }
