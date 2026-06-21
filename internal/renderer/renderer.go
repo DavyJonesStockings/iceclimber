@@ -26,7 +26,7 @@ func New(app *gtk.Application) *Renderer {
 
 	layerInit(&win.Window)
 	layerSetOverlay(&win.Window)
-	layerSetKeyboardNone(&win.Window)
+	layerSetKeyboardOnDemand(&win.Window)
 	layerAnchorLeft(&win.Window, true)
 	layerAnchorTop(&win.Window, true)
 	layerAnchorRight(&win.Window, true)
@@ -37,6 +37,9 @@ func New(app *gtk.Application) *Renderer {
 
 	canvas := NewCanvas()
 
+	// everything involving sprites should eventually be
+	// migrated to a different file that handles spawning sprites
+	// and adding them to the canvas
 	sprite, err := NewSprite(popoFramePaths())
 	if err != nil {
 		panic(err)
@@ -44,6 +47,41 @@ func New(app *gtk.Application) *Renderer {
 	canvas.AddSprite(sprite, 0, 0)
 
 	canvas.Start()
+
+	pressedKeys := make(map[uint]bool)
+
+	key := gtk.NewEventControllerKey()
+	key.ConnectKeyPressed(func(keyval, keycode uint, state gdk.ModifierType) bool {
+		pressedKeys[keyval] = true
+		var dx, dy int
+		switch keyval {
+		case gdk.KEY_h:
+			dx = -step
+			sprite.SetFacing(true)
+			sprite.SetState(StateWalk)
+		case gdk.KEY_l:
+			dx = step
+			sprite.SetFacing(false)
+			sprite.SetState(StateWalk)
+		case gdk.KEY_j:
+			dy = step
+		case gdk.KEY_k:
+			dy = -step
+		default:
+			return false
+		}
+		canvas.MoveSprite(sprite, sprite.X+dx, sprite.Y+dy)
+		return true
+	})
+
+	key.ConnectKeyReleased(func(keyval, keycode uint, state gdk.ModifierType) {
+		delete(pressedKeys, keyval)
+		if len(pressedKeys) == 0 {
+			sprite.SetState(StateIdle)
+		}
+	})
+
+	win.AddController(key)
 
 	css := gtk.NewCSSProvider()
 	css.LoadFromString("window { background: transparent; }")

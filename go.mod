@@ -5,6 +5,7 @@ go 1.26.4
 require (
 	github.com/diamondburned/gotk4/pkg v0.3.1
 	github.com/msgpack-rpc/msgpack-rpc-go v0.0.0-20131026060856-c76397e1782b
+	golang.org/x/sys v0.46.0
 )
 
 require (
