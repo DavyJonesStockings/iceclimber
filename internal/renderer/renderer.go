@@ -1,8 +1,6 @@
 package renderer
 
 import (
-	"fmt"
-
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
@@ -41,13 +39,9 @@ func New(app *gtk.Application) *Renderer {
 		disableInputRegion(&win.Window)
 	})
 	win.ConnectMap(func() {
-		w, h := win.Width(), win.Height()
-		fmt.Println("(early) screen size: ", w, h)
-
-		if w > 0 && h > 0 {
+		if w, h, err := usableScreenSize(); err == nil && w > 0 && h > 0 {
 			screenWidth, screenHeight = w, h
 		}
-		fmt.Println("screen size: ", screenWidth, screenHeight)
 	})
 
 	canvas := NewCanvas()
