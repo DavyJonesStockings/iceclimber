@@ -62,11 +62,6 @@ func New(app *gtk.Application) *Renderer {
 	key := gtk.NewEventControllerKey()
 	key.ConnectKeyPressed(func(keyval, keycode uint, state gdk.ModifierType) bool {
 		pressedKeys[keyval] = true
-		switch keyval {
-		case gdk.KEY_h, gdk.KEY_l, gdk.KEY_j, gdk.KEY_k:
-			pressedKeys[keyval] = true
-			return true
-		}
 		return false
 	})
 
@@ -77,15 +72,14 @@ func New(app *gtk.Application) *Renderer {
 	win.AddController(key)
 
 	const moveTickMs = 10
-	const gravity = 5
-	//velocityY := 0
+	const gravity = 0.5
 	_, h := sprite.Size()
-	var dx, dy int
+	var dx, dy float64
+	sprite.grounded = false
 
 	glib.TimeoutAdd(moveTickMs, func() bool {
 		dx, dy = 0, gravity
 		moving := false
-		sprite.grounded = false
 
 		// TODO figure out a way to track when y velocity
 		// is 0. needs to be scalable to not just screen
@@ -97,32 +91,32 @@ func New(app *gtk.Application) *Renderer {
 		if pressedKeys[gdk.KEY_h] {
 			dx -= step
 			sprite.SetFacing(true)
-			moving = true
 		}
 		if pressedKeys[gdk.KEY_l] {
 			dx += step
 			sprite.SetFacing(false)
-			moving = true
 		}
-		if pressedKeys[gdk.KEY_j] {
-			dy += step
+		if pressedKeys[gdk.KEY_space] && sprite.grounded {
+			sprite.jumping = true
+			sprite.grounded = false
+			sprite.velocityY = -20
 		}
-		if pressedKeys[gdk.KEY_k] {
-			dy -= step
-		}
-		//		if pressedKeys[gdk.KEY_space] && sprite.grounded {
-		//			jumping = true
-		//		}
+		sprite.velocityX = dx
+		sprite.velocityY += dy
 
 		// moving the sprite
 		if dx != 0 || dy != 0 {
-			canvas.MoveSprite(sprite, sprite.X+dx, sprite.Y+dy)
+			canvas.MoveSprite(sprite, sprite.X+sprite.velocityX, sprite.Y+sprite.velocityY)
 		}
-		if sprite.Y == screenHeight-h {
+		if sprite.Y == float64(screenHeight-h) {
 			sprite.grounded = true
+			sprite.velocityY = 0
 		}
 
 		// animation setting
+		if sprite.velocityX != 0 {
+			moving = true
+		}
 		if moving && sprite.grounded {
 			sprite.SetState(StateWalk)
 		} else {

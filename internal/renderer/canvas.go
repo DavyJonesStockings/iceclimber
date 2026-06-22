@@ -28,27 +28,27 @@ func NewCanvas() *Canvas {
 	return &Canvas{fixed: gtk.NewFixed()}
 }
 
-func Clamp(v, lo, hi int) int {
+func Clamp(v, lo, hi float64) float64 {
 	return min(max(v, lo), hi)
 }
 
-func (c *Canvas) AddSprite(s *Sprite, x, y int) {
+func (c *Canvas) AddSprite(s *Sprite, x, y float64) {
 	w, h := s.Size()
-	x = Clamp(x, 0, screenWidth-w)
-	y = Clamp(y, 0, screenHeight-h)
+	x = Clamp(x, 0, float64(screenWidth-w))
+	y = Clamp(y, 0, float64(screenHeight-h))
 
 	c.sprites = append(c.sprites, s)
 	s.X, s.Y = x, y
-	c.fixed.Put(s.Widget(), float64(x), float64(y))
+	c.fixed.Put(s.Widget(), s.X, s.Y)
 }
 
-func (c *Canvas) MoveSprite(s *Sprite, x, y int) {
+func (c *Canvas) MoveSprite(s *Sprite, x, y float64) {
 	w, h := s.Size()
-	x = Clamp(x, 0, screenWidth-w)
-	y = Clamp(y, 0, screenHeight-h)
+	x = Clamp(x, 0, float64(screenWidth-w))
+	y = Clamp(y, 0, float64(screenHeight-h))
 
 	s.X, s.Y = x, y
-	c.fixed.Move(s.Widget(), float64(x), float64(y))
+	c.fixed.Move(s.Widget(), s.X, s.Y)
 }
 
 func findTTY(pid int) (string, error) {

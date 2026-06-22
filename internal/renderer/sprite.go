@@ -24,9 +24,11 @@ type Sprite struct {
 	currentFrame int
 
 	facingLeft bool
-	X, Y       int
-	VelocityY  int
+	X, Y       float64
+	velocityX  float64
+	velocityY  float64
 	grounded   bool
+	jumping    bool
 
 	area *gtk.DrawingArea
 }
