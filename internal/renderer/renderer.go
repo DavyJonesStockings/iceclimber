@@ -77,10 +77,23 @@ func New(app *gtk.Application) *Renderer {
 	win.AddController(key)
 
 	const moveTickMs = 10
-	glib.TimeoutAdd(moveTickMs, func() bool {
-		var dx, dy int
-		moving := false
+	const gravity = 5
+	//velocityY := 0
+	_, h := sprite.Size()
+	var dx, dy int
 
+	glib.TimeoutAdd(moveTickMs, func() bool {
+		dx, dy = 0, gravity
+		moving := false
+		sprite.grounded = false
+
+		// TODO figure out a way to track when y velocity
+		// is 0. needs to be scalable to not just screen
+		// borders but also platforms. need to be able to
+		// say, from the renderer, that velocityY is now 0
+		// and then change animation states based on that
+
+		// key handling
 		if pressedKeys[gdk.KEY_h] {
 			dx -= step
 			sprite.SetFacing(true)
@@ -97,15 +110,23 @@ func New(app *gtk.Application) *Renderer {
 		if pressedKeys[gdk.KEY_k] {
 			dy -= step
 		}
+		//		if pressedKeys[gdk.KEY_space] && sprite.grounded {
+		//			jumping = true
+		//		}
 
-		if moving {
+		// moving the sprite
+		if dx != 0 || dy != 0 {
+			canvas.MoveSprite(sprite, sprite.X+dx, sprite.Y+dy)
+		}
+		if sprite.Y == screenHeight-h {
+			sprite.grounded = true
+		}
+
+		// animation setting
+		if moving && sprite.grounded {
 			sprite.SetState(StateWalk)
 		} else {
 			sprite.SetState(StateIdle)
-		}
-
-		if dx != 0 || dy != 0 {
-			canvas.MoveSprite(sprite, sprite.X+dx, sprite.Y+dy)
 		}
 		return true
 	})

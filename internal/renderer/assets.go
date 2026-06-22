@@ -14,5 +14,11 @@ func popoFramePaths() map[AnimationState][]string {
 		StateIdle: {
 			home + "/pictures/krita/popo_idle0000.png",
 		},
+		StateJump: {
+			home + "/pictures/krita/popo_idle0000.png",
+		},
+		StateFall: {
+			home + "/pictures/krita/popo_idle0000.png",
+		},
 	}
 }

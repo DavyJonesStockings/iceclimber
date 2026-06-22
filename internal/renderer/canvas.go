@@ -28,14 +28,14 @@ func NewCanvas() *Canvas {
 	return &Canvas{fixed: gtk.NewFixed()}
 }
 
-func clamp(v, lo, hi int) int {
+func Clamp(v, lo, hi int) int {
 	return min(max(v, lo), hi)
 }
 
 func (c *Canvas) AddSprite(s *Sprite, x, y int) {
 	w, h := s.Size()
-	x = clamp(x, 0, screenWidth-w)
-	y = clamp(y, 0, screenHeight-h)
+	x = Clamp(x, 0, screenWidth-w)
+	y = Clamp(y, 0, screenHeight-h)
 
 	c.sprites = append(c.sprites, s)
 	s.X, s.Y = x, y
@@ -44,8 +44,8 @@ func (c *Canvas) AddSprite(s *Sprite, x, y int) {
 
 func (c *Canvas) MoveSprite(s *Sprite, x, y int) {
 	w, h := s.Size()
-	x = clamp(x, 0, screenWidth-w)
-	y = clamp(y, 0, screenHeight-h)
+	x = Clamp(x, 0, screenWidth-w)
+	y = Clamp(y, 0, screenHeight-h)
 
 	s.X, s.Y = x, y
 	c.fixed.Move(s.Widget(), float64(x), float64(y))

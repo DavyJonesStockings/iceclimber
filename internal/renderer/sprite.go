@@ -14,15 +14,21 @@ type AnimationState string
 const (
 	StateIdle AnimationState = "idle"
 	StateWalk AnimationState = "walk"
+	StateJump AnimationState = "jump"
+	StateFall AnimationState = "fall"
 )
 
 type Sprite struct {
 	animations   map[AnimationState][]*gdkpixbuf.Pixbuf
 	state        AnimationState
 	currentFrame int
-	facingLeft   bool
-	X, Y         int
-	area         *gtk.DrawingArea
+
+	facingLeft bool
+	X, Y       int
+	VelocityY  int
+	grounded   bool
+
+	area *gtk.DrawingArea
 }
 
 func NewSprite(animations map[AnimationState][]string) (*Sprite, error) {
@@ -38,7 +44,7 @@ func NewSprite(animations map[AnimationState][]string) (*Sprite, error) {
 		}
 		loaded[state] = frames
 	}
-	return &Sprite{animations: loaded, state: StateIdle}, nil
+	return &Sprite{animations: loaded, state: StateIdle, grounded: true}, nil
 }
 
 func (s *Sprite) frames() []*gdkpixbuf.Pixbuf {
