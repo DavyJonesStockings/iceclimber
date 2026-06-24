@@ -19,7 +19,7 @@ const (
 	gravity    = 0.25
 	step       = 4
 	jumpstep   = 2
-	jumpHeight = 20
+	jumpHeight = 10
 )
 
 type Renderer struct {
@@ -59,8 +59,8 @@ func New(app *gtk.Application) *Renderer {
 	canvas.Start()
 
 	plat := NewPlatform(
-		Point{X: 500, Y: 500},
-		Point{X: 1000, Y: 550},
+		Point{X: 500, Y: 800},
+		Point{X: 1000, Y: 850},
 	)
 
 	pressedKeys := make(map[uint]bool)
