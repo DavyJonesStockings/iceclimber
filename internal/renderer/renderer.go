@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"github.com/diamondburned/gotk4/pkg/cairo"
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
@@ -9,18 +10,23 @@ import (
 )
 
 var (
-	screenWidth  = 2000
-	screenHeight = 1440
+	screenWidth  = 1400
+	screenHeight = 800
 )
 
 const (
-	step = 5
+	moveTickMs = 10
+	gravity    = 0.25
+	step       = 4
+	jumpstep   = 2
+	jumpHeight = 20
 )
 
 type Renderer struct {
-	win     *gtk.ApplicationWindow
-	canvas  *Canvas
-	sprites map[string]*Sprite
+	win       *gtk.ApplicationWindow
+	canvas    *Canvas
+	sprites   map[string]*Sprite
+	platforms []*Platform
 }
 
 func New(app *gtk.Application) *Renderer {
@@ -38,11 +44,6 @@ func New(app *gtk.Application) *Renderer {
 	win.ConnectRealize(func() {
 		disableInputRegion(&win.Window)
 	})
-	win.ConnectMap(func() {
-		if w, h, err := usableScreenSize(); err == nil && w > 0 && h > 0 {
-			screenWidth, screenHeight = w, h
-		}
-	})
 
 	canvas := NewCanvas()
 
@@ -56,6 +57,11 @@ func New(app *gtk.Application) *Renderer {
 	canvas.AddSprite(sprite, 0, 0)
 
 	canvas.Start()
+
+	plat := NewPlatform(
+		Point{X: 500, Y: 500},
+		Point{X: 1000, Y: 550},
+	)
 
 	pressedKeys := make(map[uint]bool)
 
@@ -71,15 +77,13 @@ func New(app *gtk.Application) *Renderer {
 
 	win.AddController(key)
 
-	const moveTickMs = 10
-	const gravity = 0.5
-	_, h := sprite.Size()
 	var dx, dy float64
 	sprite.grounded = false
 
 	glib.TimeoutAdd(moveTickMs, func() bool {
 		dx, dy = 0, gravity
 		moving := false
+		_, h := sprite.Size()
 
 		// TODO figure out a way to track when y velocity
 		// is 0. needs to be scalable to not just screen
@@ -89,37 +93,61 @@ func New(app *gtk.Application) *Renderer {
 
 		// key handling
 		if pressedKeys[gdk.KEY_h] {
-			dx -= step
+			if sprite.grounded {
+				dx -= step
+			} else {
+				dx -= jumpstep
+			}
 			sprite.SetFacing(true)
 		}
 		if pressedKeys[gdk.KEY_l] {
-			dx += step
+			if sprite.grounded {
+				dx += step
+			} else {
+				dx += jumpstep
+			}
 			sprite.SetFacing(false)
 		}
 		if pressedKeys[gdk.KEY_space] && sprite.grounded {
 			sprite.jumping = true
 			sprite.grounded = false
-			sprite.velocityY = -20
+			sprite.velocityY = -jumpHeight
 		}
 		sprite.velocityX = dx
 		sprite.velocityY += dy
 
 		// moving the sprite
+		proposedX := sprite.X + sprite.velocityX
+		proposedY := sprite.Y + sprite.velocityY
+
+		resX, resY := resolvePlatforms(sprite, []*Platform{plat}, proposedX, proposedY)
 		if dx != 0 || dy != 0 {
-			canvas.MoveSprite(sprite, sprite.X+sprite.velocityX, sprite.Y+sprite.velocityY)
+			canvas.MoveSprite(sprite, resX, resY)
 		}
-		if sprite.Y == float64(screenHeight-h) {
+		if sprite.Y >= float64(screenHeight-h) {
+			// using >= instead of == to negate any
+			// floating point errors
 			sprite.grounded = true
 			sprite.velocityY = 0
 		}
 
 		// animation setting
-		if sprite.velocityX != 0 {
+		// TODO: figure out how to make the sprite enter the falling
+		// state when walking off of a platform
+		if sprite.velocityX == 0 {
+			moving = false
+		} else {
 			moving = true
 		}
+
 		if moving && sprite.grounded {
 			sprite.SetState(StateWalk)
-		} else {
+		} else if sprite.velocityY < 0 {
+			sprite.SetState(StateJump)
+		} else if sprite.velocityY > 0 {
+			sprite.SetState(StateFall)
+		}
+		if !moving && sprite.grounded {
 			sprite.SetState(StateIdle)
 		}
 		return true
@@ -134,12 +162,125 @@ func New(app *gtk.Application) *Renderer {
 	)
 
 	win.SetChild(canvas.Widget())
-
-	return &Renderer{
-		win:     win,
-		canvas:  canvas,
-		sprites: map[string]*Sprite{"popo": sprite},
+	r := &Renderer{
+		win:       win,
+		canvas:    canvas,
+		sprites:   map[string]*Sprite{"popo": sprite},
+		platforms: []*Platform{plat},
 	}
+
+	win.ConnectMap(func() {
+		if w, h, err := usableScreenSize(); err == nil && w > -7 && h > 0 {
+			screenWidth, screenHeight = w, h
+		}
+		overlay := r.newPlatformOverlay()
+		canvas.fixed.Put(overlay, 0, 0)
+	})
+
+	return r
+}
+
+func (r *Renderer) newPlatformOverlay() *gtk.DrawingArea {
+	area := gtk.NewDrawingArea()
+	area.SetSizeRequest(screenWidth, screenHeight)
+	area.SetDrawFunc(func(a *gtk.DrawingArea, cr *cairo.Context, w, h int) {
+		cr.SetOperator(cairo.OperatorSource)
+		cr.SetSourceRGBA(0, 0, 0, 0)
+		cr.Rectangle(0, 0, float64(w), float64(h))
+		print(w, h)
+		cr.Fill()
+		cr.SetSourceRGBA(1, 0, 1, 0.5)
+
+		for _, p := range r.platforms {
+			cr.Rectangle(
+				p.TopLeft.X, p.TopLeft.Y,
+				p.BottomRight.X-p.TopLeft.X,
+				p.BottomRight.Y-p.TopLeft.Y,
+			)
+			cr.Fill()
+		}
+	})
+	return area
+}
+
+func resolvePlatforms(
+	sprite *Sprite,
+	platforms []*Platform,
+	proposedX, proposedY float64,
+) (float64, float64) {
+	sw, sh := sprite.Size()
+	spriteLeft := proposedX
+	spriteRight := proposedX + float64(sw)
+	spriteTop := proposedY
+	spriteBottom := proposedY + float64(sh)
+
+	for _, p := range platforms {
+		if spriteRight < p.TopLeft.X || spriteLeft > p.BottomRight.X {
+			continue
+		}
+		if spriteBottom < p.TopLeft.Y || spriteTop > p.BottomRight.Y {
+			continue
+		}
+
+		overlapLeft := spriteRight - p.TopLeft.X
+		overlapRight := p.BottomRight.X - spriteLeft
+		overlapTop := spriteBottom - p.TopLeft.Y
+		overlapBottom := p.BottomRight.Y - spriteTop
+
+		minOverlap := min(
+			min(overlapLeft, overlapRight),
+			min(overlapTop, overlapBottom),
+		)
+
+		switch minOverlap {
+		case overlapTop:
+			// Land on top
+			proposedY = p.TopLeft.Y - float64(sh)
+			sprite.velocityY = 0
+			sprite.grounded = true
+
+		case overlapBottom:
+			// Hit underside
+			proposedY = p.BottomRight.Y
+			sprite.velocityY = 0
+
+		case overlapLeft:
+			// Hit left wall
+			proposedX = p.TopLeft.X - float64(sw)
+			sprite.velocityX = 0
+
+		case overlapRight:
+			// Hit right wall
+			proposedX = p.BottomRight.X
+			sprite.velocityX = 0
+		}
+
+		//if sprite.velocityY > 0 {
+		//	if spriteBottom >= p.TopLeft.Y {
+		//		proposedY = p.TopLeft.Y - float64(sh)
+		//		sprite.velocityY = 0
+		//		sprite.grounded = true
+		//	}
+		//} else if sprite.velocityY < 0 {
+		//	if spriteTop <= p.BottomRight.Y {
+		//		proposedY = p.BottomRight.Y
+		//		sprite.velocityY = 0
+		//	}
+		//}
+
+		//if sprite.velocityX > 0 {
+		//	if spriteRight >= p.TopLeft.X {
+		//		proposedX = p.TopLeft.X - float64(sw)
+		//		sprite.velocityX = 0
+		//	}
+		//} else if sprite.velocityX < 0 {
+		//	if spriteLeft <= p.BottomRight.X {
+		//		proposedX = p.BottomRight.X
+		//		sprite.velocityX = 0
+		//	}
+		//}
+	}
+	return proposedX, proposedY
 
 }
 

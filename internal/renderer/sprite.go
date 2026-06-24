@@ -59,6 +59,11 @@ func (s *Sprite) SetState(state AnimationState) {
 	}
 	s.state = state
 	s.currentFrame = 0
+
+	if s.area != nil {
+		first := s.animations[state][0]
+		s.area.SetSizeRequest(first.Width(), first.Height())
+	}
 }
 
 func (s *Sprite) SetFacing(left bool) { s.facingLeft = left }
@@ -74,8 +79,12 @@ func (s *Sprite) Tick() {
 }
 
 func (s *Sprite) Size() (int, int) {
-	first := s.animations[StateIdle][0]
-	return first.Width(), first.Height()
+	frames := s.frames()
+	if len(frames) == 0 {
+		return 0, 0
+	}
+	f := frames[0]
+	return f.Width(), f.Height()
 }
 
 func (s *Sprite) draw(a *gtk.DrawingArea, cr *cairo.Context, width, height int) {

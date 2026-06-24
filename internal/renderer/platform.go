@@ -8,9 +8,22 @@ import (
 // "iceclimber.app/internal/rpc"
 )
 
-type Platform struct {
-	width  int
-	startX int
+type Point struct {
+	X, Y float64
 }
 
-//func (p *Platform) GetWidth()
+type Platform struct {
+	TopLeft     Point
+	BottomRight Point
+}
+
+func NewPlatform(topLeft, bottomRight Point) *Platform {
+	return &Platform{
+		TopLeft:     topLeft,
+		BottomRight: bottomRight,
+	}
+}
+
+func (p *Platform) GetWidth() {
+
+}
