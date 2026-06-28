@@ -61,9 +61,21 @@ func New(app *gtk.Application) *Renderer {
 
 	canvas.Start()
 
-	plat := NewPlatform(
+	plat1 := NewPlatform(
 		Point{X: 500, Y: 800},
 		Point{X: 1000, Y: 850},
+	)
+	plat2 := NewPlatform(
+		Point{X: 600, Y: 750},
+		Point{X: 1000, Y: 800},
+	)
+	plat3 := NewPlatform(
+		Point{X: 700, Y: 700},
+		Point{X: 1000, Y: 750},
+	)
+	plat4 := NewPlatform(
+		Point{X: 800, Y: 650},
+		Point{X: 1000, Y: 700},
 	)
 
 	pressedKeys := make(map[uint]bool)
@@ -127,7 +139,7 @@ func New(app *gtk.Application) *Renderer {
 		proposedX := sprite.X + sprite.velocityX
 		proposedY := sprite.Y + sprite.velocityY
 
-		resX, resY := resolvePlatforms(sprite, []*Platform{plat}, proposedX, proposedY)
+		resX, resY := resolvePlatforms(sprite, []*Platform{plat1, plat2, plat3, plat4}, proposedX, proposedY)
 		if dx != 0 || dy != 0 {
 			canvas.MoveSprite(sprite, resX, resY)
 		}
@@ -181,7 +193,7 @@ func New(app *gtk.Application) *Renderer {
 		win:       win,
 		canvas:    canvas,
 		sprites:   map[string]*Sprite{"popo": sprite},
-		platforms: []*Platform{plat},
+		platforms: []*Platform{plat1, plat2, plat3, plat4},
 	}
 
 	win.ConnectMap(func() {
