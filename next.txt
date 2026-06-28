@@ -1,0 +1,23 @@
+the next thing you need to do is figure out these rendering errors. it's okay to take
+a week to get this part right to make sure you can properly test the ipc + neovim connection.
+
+after you figure out the rendering errors, you need to start neovim integration.
+
+start by just establishing the connection and making sure you're getting the data you need:
+- print data to console without actually handling it
+- grab the pid from neovim init
+
+once you've verified you're getting data, you can start to parse it:
+- use pid to find tty
+- parse msgpck rpc output and assign to variables
+
+BEFORE HANDLING DATA:
+- take a bit to plan out what you'll actually be doing. this should be a lot easier once you can
+see exactly what data you're getting. what functions do you need to call automatically? how do
+they interact with the renderer? do they need anything passed into them before they can work?
+these are the functions to put in the event handler.
+
+once you have the data parsed, you can move on to actually handling it:
+- pass data into event handler, have event handler decide where to send event info
+** still not sure if data should be parsed all in one spot or if the functions
+parse the data as they need it (handler just reads the event type and forwards it?)
