@@ -27,8 +27,10 @@ type Sprite struct {
 	X, Y       float64
 	velocityX  float64
 	velocityY  float64
+	moving     bool
 	grounded   bool
 	jumping    bool
+	falling    bool
 
 	area *gtk.DrawingArea
 }

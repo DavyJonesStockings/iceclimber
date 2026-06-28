@@ -1,6 +1,9 @@
 package renderer
 
 import (
+	//"log"
+	//"time"
+
 	"github.com/diamondburned/gotk4/pkg/cairo"
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
@@ -79,10 +82,14 @@ func New(app *gtk.Application) *Renderer {
 
 	var dx, dy float64
 	sprite.grounded = false
+	sprite.moving = false
+	sprite.jumping = false
+	sprite.velocityX = 0
+	sprite.velocityY = 0
 
 	glib.TimeoutAdd(moveTickMs, func() bool {
+		//start := time.Now()
 		dx, dy = 0, gravity
-		moving := false
 		_, h := sprite.Size()
 
 		// TODO figure out a way to track when y velocity
@@ -124,6 +131,16 @@ func New(app *gtk.Application) *Renderer {
 		if dx != 0 || dy != 0 {
 			canvas.MoveSprite(sprite, resX, resY)
 		}
+
+		// set action states
+		if sprite.velocityX != 0 {
+			sprite.moving = true
+		} else {
+			sprite.moving = false
+		}
+		if sprite.velocityY >= 0 {
+			sprite.falling = true
+		}
 		if sprite.Y >= float64(screenHeight-h) {
 			// using >= instead of == to negate any
 			// floating point errors
@@ -131,25 +148,23 @@ func New(app *gtk.Application) *Renderer {
 			sprite.velocityY = 0
 		}
 
-		// animation setting
-		// TODO: figure out how to make the sprite enter the falling
-		// state when walking off of a platform
-		if sprite.velocityX == 0 {
-			moving = false
-		} else {
-			moving = true
+		// set animation states from action states
+		if sprite.grounded {
+			if sprite.moving {
+				sprite.SetState(StateWalk)
+			} else {
+				sprite.SetState(StateIdle)
+			}
+		} else if !sprite.grounded {
+			if sprite.velocityY < 0 {
+				sprite.SetState(StateJump)
+			} else {
+				sprite.SetState(StateFall)
+			}
 		}
 
-		if moving && sprite.grounded {
-			sprite.SetState(StateWalk)
-		} else if sprite.velocityY < 0 {
-			sprite.SetState(StateJump)
-		} else if sprite.velocityY > 0 {
-			sprite.SetState(StateFall)
-		}
-		if !moving && sprite.grounded {
-			sprite.SetState(StateIdle)
-		}
+		//elapsed := time.Since(start)
+		//log.Printf("redraw took %v", elapsed)
 		return true
 	})
 
@@ -180,6 +195,7 @@ func New(app *gtk.Application) *Renderer {
 	return r
 }
 
+// for testing/debugging purposes, do not remove
 func (r *Renderer) newPlatformOverlay() *gtk.DrawingArea {
 	area := gtk.NewDrawingArea()
 	area.SetSizeRequest(screenWidth, screenHeight)
@@ -187,7 +203,6 @@ func (r *Renderer) newPlatformOverlay() *gtk.DrawingArea {
 		cr.SetOperator(cairo.OperatorSource)
 		cr.SetSourceRGBA(0, 0, 0, 0)
 		cr.Rectangle(0, 0, float64(w), float64(h))
-		print(w, h)
 		cr.Fill()
 		cr.SetSourceRGBA(1, 0, 1, 0.5)
 
@@ -253,32 +268,8 @@ func resolvePlatforms(
 			// Hit right wall
 			proposedX = p.BottomRight.X
 			sprite.velocityX = 0
+
 		}
-
-		//if sprite.velocityY > 0 {
-		//	if spriteBottom >= p.TopLeft.Y {
-		//		proposedY = p.TopLeft.Y - float64(sh)
-		//		sprite.velocityY = 0
-		//		sprite.grounded = true
-		//	}
-		//} else if sprite.velocityY < 0 {
-		//	if spriteTop <= p.BottomRight.Y {
-		//		proposedY = p.BottomRight.Y
-		//		sprite.velocityY = 0
-		//	}
-		//}
-
-		//if sprite.velocityX > 0 {
-		//	if spriteRight >= p.TopLeft.X {
-		//		proposedX = p.TopLeft.X - float64(sw)
-		//		sprite.velocityX = 0
-		//	}
-		//} else if sprite.velocityX < 0 {
-		//	if spriteLeft <= p.BottomRight.X {
-		//		proposedX = p.BottomRight.X
-		//		sprite.velocityX = 0
-		//	}
-		//}
 	}
 	return proposedX, proposedY
 
