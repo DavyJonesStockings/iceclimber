@@ -104,12 +104,6 @@ func New(app *gtk.Application) *Renderer {
 		dx, dy = 0, gravity
 		_, h := sprite.Size()
 
-		// TODO figure out a way to track when y velocity
-		// is 0. needs to be scalable to not just screen
-		// borders but also platforms. need to be able to
-		// say, from the renderer, that velocityY is now 0
-		// and then change animation states based on that
-
 		// key handling
 		if pressedKeys[gdk.KEY_h] {
 			if sprite.grounded {
@@ -139,9 +133,16 @@ func New(app *gtk.Application) *Renderer {
 		proposedX := sprite.X + sprite.velocityX
 		proposedY := sprite.Y + sprite.velocityY
 
+		sprite.grounded = false // assume airborne each frame, resolvePlatforms will
+		// declare grounded and then later we check for the bottom of the screen
+
 		resX, resY := resolvePlatforms(sprite, []*Platform{plat1, plat2, plat3, plat4}, proposedX, proposedY)
-		if dx != 0 || dy != 0 {
-			canvas.MoveSprite(sprite, resX, resY)
+
+		if resY >= float64(screenHeight-h) {
+			// using >= instead of == to negate any
+			// floating point errors
+			sprite.grounded = true
+			sprite.velocityY = 0
 		}
 
 		// set action states
@@ -150,30 +151,47 @@ func New(app *gtk.Application) *Renderer {
 		} else {
 			sprite.moving = false
 		}
-		if sprite.velocityY >= 0 {
+		if sprite.velocityY > 0 {
 			sprite.falling = true
-		}
-		if sprite.Y >= float64(screenHeight-h) {
-			// using >= instead of == to negate any
-			// floating point errors
-			sprite.grounded = true
-			sprite.velocityY = 0
+		} else {
+			sprite.falling = false
 		}
 
-		// set animation states from action states
-		if sprite.grounded {
-			if sprite.moving {
-				sprite.SetState(StateWalk)
-			} else {
-				sprite.SetState(StateIdle)
-			}
-		} else if !sprite.grounded {
-			if sprite.velocityY < 0 {
-				sprite.SetState(StateJump)
-			} else {
-				sprite.SetState(StateFall)
-			}
+		resX, resY = resolveAnims(sprite, resX, resY)
+
+		if dx != 0 || dy != 0 {
+			canvas.MoveSprite(sprite, resX, resY)
 		}
+
+		// TODO: calculate offsets based on animation when setting sprite position.
+		// this will prevent the difference in sprite heights causing oscillating
+		// animation glitches when touching the ground.
+
+		// this will be calculated when the sprite changes states (hits the ground); thus, the
+		// SetState function will handle this. it will calculate the offset from
+		// the aerial animation height to the grounded animation height, and adjust the position
+		// of the sprite on the canvas to appropriately match. this will help prevent the
+		// oscillation glitch.
+
+		// on second thought, maybe i just make a new function here similar to resolvePlatforms,
+		// that way i don't have to worry about interfacing to move the sprite and instead just have
+		// a function that takes in proposedX and proposedY and returns a resolvedX and resolvedY for
+		// my movement to handle
+
+		// set animation states from action states
+		// if sprite.grounded {
+		// 	if sprite.moving {
+		// 		sprite.SetState(StateWalk)
+		// 	} else {
+		// 		sprite.SetState(StateIdle)
+		// 	}
+		// } else if !sprite.grounded {
+		// 	if sprite.velocityY < 0 {
+		// 		sprite.SetState(StateJump)
+		// 	} else {
+		// 		sprite.SetState(StateFall)
+		// 	}
+		// }
 
 		//elapsed := time.Since(start)
 		//log.Printf("redraw took %v", elapsed)
@@ -230,65 +248,94 @@ func (r *Renderer) newPlatformOverlay() *gtk.DrawingArea {
 	return area
 }
 
-func resolvePlatforms(
-	sprite *Sprite,
-	platforms []*Platform,
-	proposedX, proposedY float64,
-) (float64, float64) {
+// this function is "naive" about sprite height, but that's
+// acceptable due to resolveAnims handling it downstream
+// in the tick loop
+func resolvePlatforms(sprite *Sprite, platforms []*Platform, proposedX, proposedY float64) (float64, float64) {
 	sw, sh := sprite.Size()
-	spriteLeft := proposedX
-	spriteRight := proposedX + float64(sw)
-	spriteTop := proposedY
-	spriteBottom := proposedY + float64(sh)
 
+	resX := proposedX
+	top := sprite.Y
+	bottom := sprite.Y + float64(sh)
 	for _, p := range platforms {
-		if spriteRight < p.TopLeft.X || spriteLeft > p.BottomRight.X {
+		left := resX
+		right := resX + float64(sw)
+		if right <= p.TopLeft.X || left >= p.BottomRight.X {
 			continue
 		}
-		if spriteBottom < p.TopLeft.Y || spriteTop > p.BottomRight.Y {
+		if bottom <= p.TopLeft.Y || top >= p.BottomRight.Y {
 			continue
 		}
-
-		overlapLeft := spriteRight - p.TopLeft.X
-		overlapRight := p.BottomRight.X - spriteLeft
-		overlapTop := spriteBottom - p.TopLeft.Y
-		overlapBottom := p.BottomRight.Y - spriteTop
-
-		minOverlap := min(
-			min(overlapLeft, overlapRight),
-			min(overlapTop, overlapBottom),
-		)
-
-		switch minOverlap {
-		case overlapTop:
-			// Land on top
-			proposedY = p.TopLeft.Y - float64(sh)
-			sprite.velocityY = 0
-			sprite.grounded = true
-
-		case overlapBottom:
-			// Hit underside
-			proposedY = p.BottomRight.Y
-			sprite.velocityY = 0
-
-		case overlapLeft:
-			// Hit left wall
-			proposedX = p.TopLeft.X - float64(sw)
+		switch {
+		case sprite.X+float64(sw) <= p.TopLeft.X:
+			resX = p.TopLeft.X - float64(sw)
 			sprite.velocityX = 0
-
-		case overlapRight:
-			// Hit right wall
-			proposedX = p.BottomRight.X
+		case sprite.X >= p.BottomRight.X:
+			resX = p.BottomRight.X
 			sprite.velocityX = 0
-
 		}
 	}
-	return proposedX, proposedY
 
+	resY := proposedY
+	left := resX
+	right := resX + float64(sw)
+	for _, p := range platforms {
+		top := resY
+		bottom := resY + float64(sh)
+		if right <= p.TopLeft.X || left >= p.BottomRight.X {
+			continue
+		}
+		if bottom <= p.TopLeft.Y || top >= p.BottomRight.Y {
+			continue
+		}
+		switch {
+		case sprite.Y+float64(sw) <= p.TopLeft.Y:
+			resY = p.TopLeft.Y - float64(sh)
+			sprite.velocityY = 0
+			sprite.grounded = true
+		case sprite.Y >= p.BottomRight.Y:
+			resY = p.BottomRight.Y
+			sprite.velocityY = 0
+		}
+	}
+
+	return resX, resY
+}
+
+func resolveAnims(sprite *Sprite, x, y float64) (float64, float64) {
+
+	oldW, oldH := sprite.Size()
+
+	var next AnimationState
+	switch {
+	case sprite.grounded && sprite.moving:
+		next = StateWalk
+	case sprite.grounded && !sprite.moving:
+		next = StateIdle
+	case !sprite.grounded && sprite.velocityY < 0:
+		next = StateJump
+	default:
+		next = StateFall
+	}
+
+	if sprite.state == next {
+		return x, y
+	}
+
+	sprite.SetState(next)
+	newW, newH := sprite.Size()
+
+	// THE IMPORTANT ADJUSTMENT IS RIGHT HERE
+	y += float64(oldH - newH)
+	if !sprite.facingLeft {
+		x += float64(oldW - newW)
+	}
+
+	return x, y
 }
 
 func (r *Renderer) Show() {
-	r.win.Show()
+	r.win.SetVisible(true)
 }
 
 func (r *Renderer) HandleEvent(event rpc.Event) {

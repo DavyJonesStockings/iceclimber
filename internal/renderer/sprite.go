@@ -81,6 +81,8 @@ func (s *Sprite) Tick() {
 }
 
 func (s *Sprite) Size() (int, int) {
+	// each time this function is called, it gets the size
+	// from the first frame of the current animation
 	frames := s.frames()
 	if len(frames) == 0 {
 		return 0, 0

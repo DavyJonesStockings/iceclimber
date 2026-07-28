@@ -2,7 +2,6 @@ package renderer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -53,7 +52,7 @@ func (c *Canvas) MoveSprite(s *Sprite, x, y float64) {
 
 func findTTY(pid int) (string, error) {
 	fdDir := "/proc/" + strconv.Itoa(pid) + "/fd"
-	fds, err := ioutil.ReadDir(fdDir)
+	fds, err := os.ReadDir(fdDir)
 	if err != nil {
 		panic(err)
 	}
@@ -62,8 +61,8 @@ func findTTY(pid int) (string, error) {
 		link := filepath.Join(fdDir, fd.Name())
 		target, err := os.Readlink(link)
 		if err != nil {
-			continue
 			fmt.Println("failure in canvas.go findtty")
+			continue
 		}
 		if filepath.Dir(target) == "/dev/pts" {
 			return target, nil
