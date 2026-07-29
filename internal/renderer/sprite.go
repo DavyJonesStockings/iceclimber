@@ -40,7 +40,7 @@ func NewSprite(animations map[AnimationState][]string) (*Sprite, error) {
 	for state, paths := range animations {
 		frames := make([]*gdkpixbuf.Pixbuf, len(paths))
 		for i, path := range paths {
-			pb, err := gdkpixbuf.NewPixbufFromFile(path)
+			pb, err := loadPixbufFromEmbed(path)
 			if err != nil {
 				return nil, err
 			}
