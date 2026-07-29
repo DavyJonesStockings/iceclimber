@@ -1,7 +1,15 @@
-the next thing you need to do is figure out these rendering errors. it's okay to take
-a week to get this part right to make sure you can properly test the ipc + neovim connection.
+NEOVIM INTEGRATION TIME!! WOOOOO!!1!111!!
 
-after you figure out the rendering errors, you need to start neovim integration.
+
+newest plan:
+- no need for RPC! since the iceclimber binary acts as a server that only receives information (no responses),
+simple message pack should be sufficient. TODO: look into alternate serialization formats other than 
+message pack, determine the right one.
+- we can use unix sockets (kind of)
+- it'll be a unix socket (sock_stream + explicit length prefixing) on unix but named pipes on windows
+	- these expose different APIs but it's mostly the same, the infrastructure for supporting both
+	is super minimal. go-winio for golang and libuv on lua to handle this
+
 
 start by just establishing the connection and making sure you're getting the data you need:
 - print data to console without actually handling it
@@ -9,7 +17,7 @@ start by just establishing the connection and making sure you're getting the dat
 
 once you've verified you're getting data, you can start to parse it:
 - use pid to find tty
-- parse msgpck rpc output and assign to variables
+- parse msgpck output and assign to variables
 
 BEFORE HANDLING DATA:
 - take a bit to plan out what you'll actually be doing. this should be a lot easier once you can
