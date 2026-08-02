@@ -104,6 +104,12 @@ func New(app *gtk.Application) *Renderer {
 		dx, dy = 0, gravity
 		_, h := sprite.Size()
 
+		// quit func
+		if pressedKeys[gdk.KEY_q] {
+			win.Close()
+			return false
+		}
+
 		// key handling
 		if pressedKeys[gdk.KEY_h] {
 			if sprite.grounded {
