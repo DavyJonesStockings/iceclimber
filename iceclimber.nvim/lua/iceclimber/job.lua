@@ -24,9 +24,7 @@ end, {})
 
 function M.binary_path()
   local dev_path = plugin_root() .. "/../iceclimber" -- Go project root
-  if vim.fn.executable(dev_path) == 1 then
-    return dev_path
-  end
+  if vim.fn.executable(dev_path) == 1 then return dev_path end
   return "iceclimber" -- fall back to $PATH
 end
 
@@ -48,15 +46,13 @@ function M.start()
       end
       if data then
         vim.schedule(function()
-          -- raw output for now — parsing goes here once we know the wire format
+          -- raw output for now — parsing goes here once i know the wire format
           vim.notify("iceclimber: " .. data)
         end)
       end
     end,
     stderr = function(_, data)
-      if data then
-        append_log(data)
-      end
+      if data then append_log(data) end
     end,
   }, function(obj)
     vim.schedule(function()
