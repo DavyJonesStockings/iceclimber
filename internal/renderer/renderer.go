@@ -1,8 +1,8 @@
 package renderer
 
 import (
-	//"log"
-	//"time"
+	// "log"
+	// "time"
 
 	"github.com/diamondburned/gotk4/pkg/cairo"
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
@@ -100,7 +100,7 @@ func New(app *gtk.Application) *Renderer {
 	sprite.velocityY = 0
 
 	glib.TimeoutAdd(moveTickMs, func() bool {
-		//start := time.Now()
+		// start := time.Now()
 		dx, dy = 0, gravity
 		_, h := sprite.Size()
 
@@ -168,39 +168,6 @@ func New(app *gtk.Application) *Renderer {
 		if dx != 0 || dy != 0 {
 			canvas.MoveSprite(sprite, resX, resY)
 		}
-
-		// TODO: calculate offsets based on animation when setting sprite position.
-		// this will prevent the difference in sprite heights causing oscillating
-		// animation glitches when touching the ground.
-
-		// this will be calculated when the sprite changes states (hits the ground); thus, the
-		// SetState function will handle this. it will calculate the offset from
-		// the aerial animation height to the grounded animation height, and adjust the position
-		// of the sprite on the canvas to appropriately match. this will help prevent the
-		// oscillation glitch.
-
-		// on second thought, maybe i just make a new function here similar to resolvePlatforms,
-		// that way i don't have to worry about interfacing to move the sprite and instead just have
-		// a function that takes in proposedX and proposedY and returns a resolvedX and resolvedY for
-		// my movement to handle
-
-		// set animation states from action states
-		// if sprite.grounded {
-		// 	if sprite.moving {
-		// 		sprite.SetState(StateWalk)
-		// 	} else {
-		// 		sprite.SetState(StateIdle)
-		// 	}
-		// } else if !sprite.grounded {
-		// 	if sprite.velocityY < 0 {
-		// 		sprite.SetState(StateJump)
-		// 	} else {
-		// 		sprite.SetState(StateFall)
-		// 	}
-		// }
-
-		//elapsed := time.Since(start)
-		//log.Printf("redraw took %v", elapsed)
 		return true
 	})
 

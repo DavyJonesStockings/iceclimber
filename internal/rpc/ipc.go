@@ -1,14 +1,24 @@
 package rpc
 
+type Line struct {
+	Text  string `json:"text"`
+	Width int    `json:"width"`
+}
+
 type Event struct {
-	Widths []int
+	Type      string `json:"type"`
+	Top       int    `json:"top"`
+	Bot       int    `json:"bot"`
+	WinWidth  int    `json:"win_width"`
+	WinHeight int    `json:"win_height"`
+	LeftCol   int    `json:"leftcol"`
+	Lines     []Line `json:"lines"`
+	Cursor    [2]int `json:"cursor"` // [row, col] to match nvim_win_get_cursor
 }
 
-type Server struct {
-	cb func(Event)
-}
-
-func (s *Server) SendWidths(widths []int) error {
-	s.cb(Event{Widths: widths})
-	return nil
+type Command struct {
+	Type  string `json:"type"`
+	Count int    `json:"count,omitempty"`
+	Line  int    `json:"line,omitempty"`
+	Col   int    `json:"col,omitempty"`
 }

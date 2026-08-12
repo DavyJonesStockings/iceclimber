@@ -24,6 +24,6 @@ func NewPlatform(topLeft, bottomRight Point) *Platform {
 	}
 }
 
-func (p *Platform) GetWidth() {
-
+func (p *Platform) GetWidth() float64 {
+	return p.BottomRight.X - p.TopLeft.X
 }

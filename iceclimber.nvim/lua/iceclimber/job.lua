@@ -28,7 +28,7 @@ function M.binary_path()
   return "iceclimber" -- fall back to $PATH
 end
 
-function M.start()
+function M.start(on_ready)
   if job ~= nil then
     vim.notify("iceclimber already running", vim.log.levels.WARN)
     return
@@ -45,10 +45,8 @@ function M.start()
         return
       end
       if data then
-        vim.schedule(function()
-          -- raw output for now — parsing goes here once i know the wire format
-          vim.notify("iceclimber: " .. data)
-        end)
+        if data:find("ICECLIMBER_READY") then vim.schedule(on_ready) end
+        append_log(data)
       end
     end,
     stderr = function(_, data)

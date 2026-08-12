@@ -1,39 +1,66 @@
 package rpc
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
-	"reflect"
-
-	msgpackrpc "github.com/msgpack-rpc/msgpack-rpc-go/rpc"
 )
 
-type methodResolver struct {
-	receiver reflect.Value
+type Server struct {
+	cb   func(Event)
+	conn net.Conn
 }
 
-func (r *methodResolver) Resolve(name string, args []reflect.Value) (reflect.Value, error) {
-	method := r.receiver.MethodByName(name)
-	if !method.IsValid() {
-		return reflect.Value{}, fmt.Errorf("unknown method: %s", name)
-	}
-	return method, nil
-}
-
-func Start(cb func(Event)) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+func Start(cb func(Event)) *Server {
+	ln, err := net.Listen("tcp", "127.0.0.1:4545")
 	if err != nil {
 		log.Fatal(err)
 	}
+	// using fmt instead of log so that this goes to stdout not stderr
+	fmt.Println("ICECLIMBER_READY")
 
-	handler := &Server{cb: cb}
-	resolver := &methodResolver{receiver: reflect.ValueOf(handler)}
+	conn, err := ln.Accept()
+	if err != nil {
+		log.Println("accept error:", err)
+	}
+	log.Println("client connected")
 
-	server := msgpackrpc.NewServer(resolver, true, nil)
-	server.Listen(ln)
+	s := &Server{cb: cb, conn: conn}
+	go s.readLoop()
+	return s
 
-	log.Println("RPC listening on", ln.Addr())
+}
 
-	server.Run()
+func (s *Server) readLoop() {
+	scanner := bufio.NewScanner(s.conn)
+
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
+	for scanner.Scan() {
+		var event Event
+		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
+			log.Println("decode error: ", err)
+			continue
+		}
+		s.cb(event)
+		log.Printf("recv event: type=%s top=%d bot=%d lines=%d cursor=%v",
+			event.Type, event.Top, event.Bot, len(event.Lines), event.Cursor)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Println("scan error: ", err)
+	}
+	log.Println("client disconnected")
+}
+
+func (s *Server) SendCommand(cmd Command) error {
+	data, err := json.Marshal(cmd)
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	_, err = s.conn.Write(data)
+	return err
 }

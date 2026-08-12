@@ -22,13 +22,14 @@ func main() {
 		r.Show()
 	})
 
-	go rpc.Start(func(event rpc.Event) {
+	server := rpc.Start(func(event rpc.Event) {
 		glib.IdleAdd(func() {
 			if r != nil {
 				r.HandleEvent(event)
 			}
 		})
 	})
+	_ = server
 
 	os.Exit(app.Run(os.Args))
 }

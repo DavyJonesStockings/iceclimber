@@ -34,6 +34,7 @@ local function get_visible_state()
   end
 
   return {
+    type = "state",
     win = win,
     buf = buf,
     top = top,
