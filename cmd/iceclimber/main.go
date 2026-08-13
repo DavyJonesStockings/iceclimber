@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 
 	"github.com/diamondburned/gotk4/pkg/gio/v2"
@@ -13,6 +14,8 @@ import (
 )
 
 func main() {
+	standalone := flag.Bool("standalone", false, "run without waiting for nvim tcp connect (for debugging)")
+	flag.Parse()
 	app := gtk.NewApplication("iceclimber.app", gio.ApplicationFlagsNone)
 
 	var r *renderer.Renderer
@@ -22,14 +25,15 @@ func main() {
 		r.Show()
 	})
 
-	server := rpc.Start(func(event rpc.Event) {
-		glib.IdleAdd(func() {
-			if r != nil {
-				r.HandleEvent(event)
-			}
+	if !*standalone {
+		go rpc.Start(func(event rpc.Event) {
+			glib.IdleAdd(func() {
+				if r != nil {
+					r.HandleEvent(event)
+				}
+			})
 		})
-	})
-	_ = server
+	}
 
 	os.Exit(app.Run(os.Args))
 }
