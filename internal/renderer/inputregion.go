@@ -11,7 +11,7 @@ import (
 )
 
 func getSurface(win *gtk.Window) *C.GdkSurface {
-	widget := (*C.GtkWidget)(unsafe.Pointer(coreglib.InternObject(win).Native()))
+	widget := (*C.GtkWidget)(unsafe.Pointer(coreglib.BaseObject(win).Native()))
 	native := C.gtk_widget_get_native(widget)
 	if native == nil {
 		return nil

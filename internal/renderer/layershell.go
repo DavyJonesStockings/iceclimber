@@ -11,7 +11,7 @@ import (
 )
 
 func gtkWin(win *gtk.Window) *C.GtkWindow {
-	return (*C.GtkWindow)(unsafe.Pointer(coreglib.InternObject(win).Native()))
+	return (*C.GtkWindow)(unsafe.Pointer(coreglib.BaseObject(win).Native()))
 }
 
 func layerInit(win *gtk.Window) {
@@ -28,6 +28,10 @@ func layerSetKeyboardOnDemand(win *gtk.Window) {
 
 func layerSetKeyboardExclusive(win *gtk.Window) {
 	C.gtk_layer_set_keyboard_mode(gtkWin(win), C.GTK_LAYER_SHELL_KEYBOARD_MODE_EXCLUSIVE)
+}
+
+func layerSetExclusiveZoneIgnore(win *gtk.Window) {
+	C.gtk_layer_set_exclusive_zone(gtkWin(win), C.int(-1))
 }
 
 func layerSetKeyboardNone(win *gtk.Window) {

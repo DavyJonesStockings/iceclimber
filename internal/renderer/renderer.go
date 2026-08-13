@@ -26,13 +26,21 @@ const (
 )
 
 type Renderer struct {
-	win       *gtk.ApplicationWindow
-	canvas    *Canvas
-	sprites   map[string]*Sprite
-	platforms []*Platform
+	win              *gtk.ApplicationWindow
+	canvas           *Canvas
+	sprites          map[string]*Sprite
+	platforms        []*Platform
+	targetWindowAddr string
+	clearInput       func()
+	hasFocus         bool
 }
 
 func New(app *gtk.Application) *Renderer {
+	info, err := currentFocusedWindowInfo()
+	if err == nil {
+		screenWidth, screenHeight = info.Size[0], info.Size[1]
+	}
+
 	win := gtk.NewApplicationWindow(app)
 	win.SetDefaultSize(screenWidth, screenHeight)
 	win.SetDecorated(false)
@@ -42,8 +50,11 @@ func New(app *gtk.Application) *Renderer {
 	layerSetKeyboardOnDemand(&win.Window)
 	layerAnchorLeft(&win.Window, true)
 	layerAnchorTop(&win.Window, true)
-	layerAnchorRight(&win.Window, true)
-	layerAnchorBottom(&win.Window, true)
+	layerSetExclusiveZoneIgnore(&win.Window)
+	if err == nil {
+		layerSetMarginLeft(&win.Window, info.At[0])
+		layerSetMarginTop(&win.Window, info.At[1])
+	}
 	win.ConnectRealize(func() {
 		disableInputRegion(&win.Window)
 	})
@@ -74,8 +85,8 @@ func New(app *gtk.Application) *Renderer {
 		Point{X: 1000, Y: 750},
 	)
 	plat4 := NewPlatform(
-		Point{X: 800, Y: 650},
-		Point{X: 1000, Y: 700},
+		Point{X: 0, Y: 0},
+		Point{X: 693, Y: 822},
 	)
 
 	pressedKeys := make(map[uint]bool)
@@ -91,6 +102,12 @@ func New(app *gtk.Application) *Renderer {
 	})
 
 	win.AddController(key)
+
+	clearInput := func() {
+		for k := range pressedKeys {
+			delete(pressedKeys, k)
+		}
+	}
 
 	var dx, dy float64
 	sprite.grounded = false
@@ -147,6 +164,7 @@ func New(app *gtk.Application) *Renderer {
 		if resY >= float64(screenHeight-h) {
 			// using >= instead of == to negate any
 			// floating point errors
+			resY = float64(screenHeight - h)
 			sprite.grounded = true
 			sprite.velocityY = 0
 		}
@@ -172,7 +190,15 @@ func New(app *gtk.Application) *Renderer {
 	})
 
 	css := gtk.NewCSSProvider()
-	css.LoadFromString("window { background: transparent; }")
+	css.LoadFromString(`
+		window { background: transparent; }
+		window.background, window.csd {
+			box-shadow: none;
+			margin: 0;
+			border: none;
+			border-radius: 0;
+		}
+		`)
 	gtk.StyleContextAddProviderForDisplay(
 		gdk.DisplayGetDefault(),
 		css,
@@ -181,21 +207,46 @@ func New(app *gtk.Application) *Renderer {
 
 	win.SetChild(canvas.Widget())
 	r := &Renderer{
-		win:       win,
-		canvas:    canvas,
-		sprites:   map[string]*Sprite{"popo": sprite},
-		platforms: []*Platform{plat1, plat2, plat3, plat4},
+		win:        win,
+		canvas:     canvas,
+		sprites:    map[string]*Sprite{"popo": sprite},
+		platforms:  []*Platform{plat1, plat2, plat3, plat4},
+		clearInput: clearInput,
+		hasFocus:   true,
 	}
 
 	win.ConnectMap(func() {
-		if w, h, err := usableScreenSize(); err == nil && w > -7 && h > 0 {
-			screenWidth, screenHeight = w, h
-		}
 		overlay := r.newPlatformOverlay()
 		canvas.fixed.Put(overlay, 0, 0)
+		r.StartFocusTracking()
 	})
 
 	return r
+}
+
+func (r *Renderer) StartFocusTracking() {
+	info, err := currentFocusedWindowInfo()
+	if err != nil {
+		return
+	}
+	r.targetWindowAddr = info.Address
+
+	watchFocus(func(focusedAddr string) {
+		glib.IdleAdd(func() {
+			focused := focusedAddr == r.targetWindowAddr
+			if focused == r.hasFocus {
+				return
+			}
+			r.hasFocus = focused
+
+			if focused {
+				layerSetKeyboardOnDemand(&r.win.Window)
+			} else {
+				layerSetKeyboardNone(&r.win.Window)
+				r.clearInput() // keep key inputs from sticking
+			}
+		})
+	})
 }
 
 // for testing/debugging purposes, do not remove
