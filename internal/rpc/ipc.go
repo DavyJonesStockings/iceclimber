@@ -1,5 +1,9 @@
 package rpc
 
+const (
+	EventTypeState = "state"
+)
+
 type Line struct {
 	Text  string `json:"text"`
 	Width int    `json:"width"`
@@ -15,6 +19,12 @@ type Event struct {
 	Lines     []Line `json:"lines"`
 	Cursor    [2]int `json:"cursor"` // [row, col] to match nvim_win_get_cursor
 }
+
+const (
+	CommandScrollLeft  = "scroll_left"
+	CommandScrollRight = "scroll_right"
+	CommandCursorMove  = "cursor_move"
+)
 
 type Command struct {
 	Type  string `json:"type"`

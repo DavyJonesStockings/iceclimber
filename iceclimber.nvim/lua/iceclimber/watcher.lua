@@ -29,7 +29,7 @@ local function get_visible_state()
   end
 
   return {
-    type = "state",
+    type = require("iceclimber.events").event.state,
     top = top,
     bot = bot,
     win_width = vim.api.nvim_win_get_width(target_win),

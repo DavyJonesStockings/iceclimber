@@ -3,6 +3,7 @@ package renderer
 import (
 	// "time"
 
+	"fmt"
 	"log"
 
 	"github.com/diamondburned/gotk4/pkg/cairo"
@@ -34,6 +35,7 @@ type Renderer struct {
 	targetWindowAddr string
 	clearInput       func()
 	hasFocus         bool
+	currentViewport  rpc.Event
 }
 
 func New(app *gtk.Application) *Renderer {
@@ -390,6 +392,12 @@ func (r *Renderer) HandleEvent(event rpc.Event) {
 	switch event.Type {
 	case "resume_focus":
 		r.resumeFocus()
-	case "state":
+	case rpc.EventTypeState:
+	default:
+		fmt.Println("iceclimber: unhandled event type:", event.Type)
 	}
+}
+
+func (r *Renderer) handleStateEvent(event rpc.Event) {
+	r.currentViewport = event
 }
