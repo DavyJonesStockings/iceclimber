@@ -1,8 +1,9 @@
 package renderer
 
 import (
-	// "log"
 	// "time"
+
+	"log"
 
 	"github.com/diamondburned/gotk4/pkg/cairo"
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
@@ -47,7 +48,7 @@ func New(app *gtk.Application) *Renderer {
 
 	layerInit(&win.Window)
 	layerSetOverlay(&win.Window)
-	layerSetKeyboardOnDemand(&win.Window)
+	layerSetKeyboardExclusive(&win.Window)
 	layerAnchorLeft(&win.Window, true)
 	layerAnchorTop(&win.Window, true)
 	layerSetExclusiveZoneIgnore(&win.Window)
@@ -86,13 +87,22 @@ func New(app *gtk.Application) *Renderer {
 	)
 	plat4 := NewPlatform(
 		Point{X: 0, Y: 0},
-		Point{X: 693, Y: 822},
+		Point{X: 1000, Y: 100},
 	)
 
 	pressedKeys := make(map[uint]bool)
 
+	var r *Renderer
+
 	key := gtk.NewEventControllerKey()
 	key.ConnectKeyPressed(func(keyval, keycode uint, state gdk.ModifierType) bool {
+		if keyval == gdk.KEY_Escape {
+			if err := focusWindow(r.targetWindowAddr); err == nil {
+				layerSetKeyboardNone(&win.Window)
+				r.hasFocus = false
+				r.clearInput()
+			}
+		}
 		pressedKeys[keyval] = true
 		return false
 	})
@@ -206,7 +216,7 @@ func New(app *gtk.Application) *Renderer {
 	)
 
 	win.SetChild(canvas.Widget())
-	r := &Renderer{
+	r = &Renderer{
 		win:        win,
 		canvas:     canvas,
 		sprites:    map[string]*Sprite{"popo": sprite},
@@ -231,22 +241,25 @@ func (r *Renderer) StartFocusTracking() {
 	}
 	r.targetWindowAddr = info.Address
 
-	watchFocus(func(focusedAddr string) {
+	if err := watchFocus(func(focusedAddr string) {
 		glib.IdleAdd(func() {
 			focused := focusedAddr == r.targetWindowAddr
+			log.Printf("focus event: addr=%s target=%s focused=%v hasFocus=%v",
+				focusedAddr, r.targetWindowAddr, focused, r.hasFocus)
 			if focused == r.hasFocus {
 				return
 			}
-			r.hasFocus = focused
-
 			if focused {
-				layerSetKeyboardOnDemand(&r.win.Window)
+				r.resumeFocus()
 			} else {
 				layerSetKeyboardNone(&r.win.Window)
-				r.clearInput() // keep key inputs from sticking
+				r.hasFocus = false
+				r.clearInput()
 			}
 		})
-	})
+	}); err != nil {
+		log.Println("watchFocus failed to start", err)
+	}
 }
 
 // for testing/debugging purposes, do not remove
@@ -358,10 +371,25 @@ func resolveAnims(sprite *Sprite, x, y float64) (float64, float64) {
 	return x, y
 }
 
+func (r *Renderer) resumeFocus() {
+	r.win.SetVisible(false)
+	glib.TimeoutAdd(16, func() bool { // one frame later, after the hide actually commits
+		layerSetKeyboardExclusive(&r.win.Window)
+		r.win.SetVisible(true)
+		r.hasFocus = true
+		return false // one-shot timer
+	})
+}
+
 func (r *Renderer) Show() {
 	r.win.SetVisible(true)
 }
 
 func (r *Renderer) HandleEvent(event rpc.Event) {
-	_ = event // placeholder
+	// get ready for this function to become huge...
+	switch event.Type {
+	case "resume_focus":
+		r.resumeFocus()
+	case "state":
+	}
 }

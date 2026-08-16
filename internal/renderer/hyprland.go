@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+type hyprActiveWindow struct {
+	Address string `json:"address"`
+	At      [2]int `json:"at"`
+	Size    [2]int `json:"size"`
+}
+
 func hyprSocketPath(socketName string) (string, error) {
 	sig := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
 	if sig == "" {
@@ -20,12 +26,6 @@ func hyprSocketPath(socketName string) (string, error) {
 		return "", fmt.Errorf("XDG_RUNTIME_DIR not set")
 	}
 	return fmt.Sprintf("%s/hypr/%s/%s", runtimeDir, sig, socketName), nil
-}
-
-type hyprActiveWindow struct {
-	Address string `json:"address"`
-	At      [2]int `json:"at"`
-	Size    [2]int `json:"size"`
 }
 
 // currentFocusedWindowAddress queries whatever window currently has focus,
@@ -39,6 +39,7 @@ func currentFocusedWindowInfo() (hyprActiveWindow, error) {
 	if err := json.Unmarshal(out, &w); err != nil {
 		return hyprActiveWindow{}, err
 	}
+	w.Address = strings.TrimPrefix(w.Address, "0x")
 	return w, nil
 }
 
@@ -72,4 +73,8 @@ func watchFocus(cb func(windowAddress string)) error {
 	}()
 
 	return nil
+}
+
+func focusWindow(address string) error {
+	return exec.Command("hyprctl", "dispatch", "focuswindow", "address:"+address).Run()
 }

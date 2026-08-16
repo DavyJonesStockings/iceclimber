@@ -1,6 +1,4 @@
-if vim.g.loaded_my_plugin then
-  return
-end
+if vim.g.loaded_my_plugin then return end
 vim.g.loaded_my_plugin = true
 
 vim.api.nvim_create_user_command("IceClimberStart", function()
@@ -9,6 +7,10 @@ end, {})
 
 vim.api.nvim_create_user_command("IceClimberStop", function()
   require("iceclimber").stop()
+end, {})
+
+vim.api.nvim_create_user_command("IceClimberResume", function()
+  require("iceclimber.socket").send({ type = "resume_focus" })
 end, {})
 
 vim.api.nvim_create_user_command("IceClimberStatus", function()

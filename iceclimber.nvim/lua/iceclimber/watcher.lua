@@ -62,6 +62,13 @@ function M.start(on_update)
     end,
   })
 
+  vim.api.nvim_create_autocmd("FocusGained", {
+    group = group,
+    callback = function()
+      require("iceclimber.socket").send({ type = "resume_focus" })
+    end,
+  })
+
   vim.api.nvim_buf_attach(target_buf, false, {
     on_lines = function()
       vim.schedule(function()

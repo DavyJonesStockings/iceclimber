@@ -35,5 +35,5 @@ func main() {
 		})
 	}
 
-	os.Exit(app.Run(os.Args))
+	os.Exit(app.Run(os.Args[:1]))
 }
