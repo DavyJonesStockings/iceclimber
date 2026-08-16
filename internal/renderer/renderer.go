@@ -32,10 +32,10 @@ type Renderer struct {
 	canvas           *Canvas
 	sprites          map[string]*Sprite
 	platforms        []*Platform
+	overlayArea      *gtk.DrawingArea
 	targetWindowAddr string
 	clearInput       func()
 	hasFocus         bool
-	currentViewport  tcp.Event
 }
 
 func New(app *gtk.Application) *Renderer {
@@ -128,6 +128,15 @@ func New(app *gtk.Application) *Renderer {
 	sprite.velocityX = 0
 	sprite.velocityY = 0
 
+	r = &Renderer{
+		win:        win,
+		canvas:     canvas,
+		sprites:    map[string]*Sprite{"popo": sprite},
+		platforms:  []*Platform{plat1, plat2, plat3, plat4},
+		clearInput: clearInput,
+		hasFocus:   true,
+	}
+
 	glib.TimeoutAdd(moveTickMs, func() bool {
 		// start := time.Now()
 		dx, dy = 0, gravity
@@ -171,7 +180,7 @@ func New(app *gtk.Application) *Renderer {
 		sprite.grounded = false // assume airborne each frame, resolvePlatforms will
 		// declare grounded and then later we check for the bottom of the screen
 
-		resX, resY := resolvePlatforms(sprite, []*Platform{plat1, plat2, plat3, plat4}, proposedX, proposedY)
+		resX, resY := resolvePlatforms(sprite, r.platforms, proposedX, proposedY)
 
 		if resY >= float64(screenHeight-h) {
 			// using >= instead of == to negate any
@@ -218,17 +227,9 @@ func New(app *gtk.Application) *Renderer {
 	)
 
 	win.SetChild(canvas.Widget())
-	r = &Renderer{
-		win:        win,
-		canvas:     canvas,
-		sprites:    map[string]*Sprite{"popo": sprite},
-		platforms:  []*Platform{plat1, plat2, plat3, plat4},
-		clearInput: clearInput,
-		hasFocus:   true,
-	}
-
 	win.ConnectMap(func() {
 		overlay := r.newPlatformOverlay()
+		r.overlayArea = overlay
 		canvas.fixed.Put(overlay, 0, 0)
 		r.StartFocusTracking()
 	})
@@ -387,17 +388,50 @@ func (r *Renderer) Show() {
 	r.win.SetVisible(true)
 }
 
+func (r *Renderer) handleStateEvent(event tcp.Event) {
+	if event.WinWidth == 0 || event.WinHeight == 0 {
+		return
+	}
+
+	// the units for these variables is TERMINAL CELLS
+	cellWidth := float64(screenWidth) / float64(event.WinWidth)
+	cellHeight := float64(screenHeight) / float64(event.WinHeight)
+
+	platforms := make([]*Platform, 0, len(event.Lines))
+	for i, line := range event.Lines {
+		if line.Width == 0 {
+			continue
+		}
+
+		widthCells := line.Width
+		if widthCells > event.WinWidth {
+			widthCells = event.WinWidth
+		}
+
+		rowTop := float64(i) * cellHeight
+		rowBottom := rowTop + cellHeight
+
+		platforms = append(platforms, NewPlatform(
+			Point{X: 0, Y: rowTop},
+			Point{X: float64(widthCells) * cellWidth, Y: rowBottom},
+		))
+	}
+
+	r.platforms = platforms
+	if r.overlayArea != nil {
+		r.overlayArea.QueueDraw()
+	}
+
+}
+
 func (r *Renderer) HandleEvent(event tcp.Event) {
 	// get ready for this function to become huge...
 	switch event.Type {
+	case tcp.EventTypeState:
+		r.handleStateEvent(event)
 	case "resume_focus":
 		r.resumeFocus()
-	case tcp.EventTypeState:
 	default:
 		fmt.Println("iceclimber: unhandled event type:", event.Type)
 	}
-}
-
-func (r *Renderer) handleStateEvent(event tcp.Event) {
-	r.currentViewport = event
 }
