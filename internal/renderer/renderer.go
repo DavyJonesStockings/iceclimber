@@ -11,7 +11,7 @@ import (
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 
-	"iceclimber.app/internal/rpc"
+	"iceclimber.app/internal/tcp"
 )
 
 var (
@@ -35,7 +35,7 @@ type Renderer struct {
 	targetWindowAddr string
 	clearInput       func()
 	hasFocus         bool
-	currentViewport  rpc.Event
+	currentViewport  tcp.Event
 }
 
 func New(app *gtk.Application) *Renderer {
@@ -387,17 +387,17 @@ func (r *Renderer) Show() {
 	r.win.SetVisible(true)
 }
 
-func (r *Renderer) HandleEvent(event rpc.Event) {
+func (r *Renderer) HandleEvent(event tcp.Event) {
 	// get ready for this function to become huge...
 	switch event.Type {
 	case "resume_focus":
 		r.resumeFocus()
-	case rpc.EventTypeState:
+	case tcp.EventTypeState:
 	default:
 		fmt.Println("iceclimber: unhandled event type:", event.Type)
 	}
 }
 
-func (r *Renderer) handleStateEvent(event rpc.Event) {
+func (r *Renderer) handleStateEvent(event tcp.Event) {
 	r.currentViewport = event
 }

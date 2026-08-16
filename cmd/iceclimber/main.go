@@ -10,7 +10,7 @@ import (
 	// "github.com/msgpack-rpc/msgpack-rpc-go/rpc"
 
 	"iceclimber.app/internal/renderer"
-	"iceclimber.app/internal/rpc"
+	"iceclimber.app/internal/tcp"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	})
 
 	if !*standalone {
-		go rpc.Start(func(event rpc.Event) {
+		go tcp.Start(func(event tcp.Event) {
 			glib.IdleAdd(func() {
 				if r != nil {
 					r.HandleEvent(event)
