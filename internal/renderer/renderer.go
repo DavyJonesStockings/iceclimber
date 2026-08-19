@@ -237,6 +237,7 @@ func New(app *gtk.Application) *Renderer {
 	return r
 }
 
+// TODO: fix this fuck ass function
 func (r *Renderer) StartFocusTracking() {
 	info, err := currentFocusedWindowInfo()
 	if err != nil {
@@ -377,7 +378,7 @@ func resolveAnims(sprite *Sprite, x, y float64) (float64, float64) {
 func (r *Renderer) resumeFocus() {
 	r.win.SetVisible(false)
 	glib.TimeoutAdd(16, func() bool { // one frame later, after the hide actually commits
-		layerSetKeyboardExclusive(&r.win.Window)
+		layerSetKeyboardOnDemand(&r.win.Window)
 		r.win.SetVisible(true)
 		r.hasFocus = true
 		return false // one-shot timer
@@ -394,8 +395,12 @@ func (r *Renderer) handleStateEvent(event tcp.Event) {
 	}
 
 	// the units for these variables is TERMINAL CELLS
-	cellWidth := float64(screenWidth) / float64(event.WinWidth)
-	cellHeight := float64(screenHeight) / float64(event.WinHeight)
+	cellWidth := float64(screenWidth) / float64(event.ScreenCols)
+	cellHeight := float64(screenHeight) / float64(event.ScreenRows)
+
+	gutterLeft := event.Config.GutterLeft
+	usableCols := event.WinWidth - gutterLeft
+	xOffset := float64(gutterLeft) * cellWidth
 
 	platforms := make([]*Platform, 0, len(event.Lines))
 	for i, line := range event.Lines {
@@ -404,16 +409,16 @@ func (r *Renderer) handleStateEvent(event tcp.Event) {
 		}
 
 		widthCells := line.Width
-		if widthCells > event.WinWidth {
-			widthCells = event.WinWidth
+		if widthCells > usableCols {
+			widthCells = usableCols
 		}
 
 		rowTop := float64(i) * cellHeight
 		rowBottom := rowTop + cellHeight
 
 		platforms = append(platforms, NewPlatform(
-			Point{X: 0, Y: rowTop},
-			Point{X: float64(widthCells) * cellWidth, Y: rowBottom},
+			Point{X: xOffset, Y: rowTop},
+			Point{X: xOffset + float64(widthCells)*cellWidth, Y: rowBottom},
 		))
 	}
 

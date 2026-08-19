@@ -4,9 +4,17 @@ local saved_win_opts = {}
 
 local target_win = nil
 local target_buf = nil
+local events = require("iceclimber.events")
 
 local function is_target_win(win)
   return win == target_win and vim.api.nvim_win_is_valid(win)
+end
+
+local function get_render_config(win)
+  local wininfo = vim.fn.getwininfo(win)[1]
+  return {
+    gutter_left = wininfo and wininfo.textoff or 0,
+  }
 end
 
 local function restore_view(win)
@@ -29,14 +37,17 @@ local function get_visible_state()
   end
 
   return {
-    type = require("iceclimber.events").event.state,
+    type = events.event.state,
     top = top,
     bot = bot,
     win_width = vim.api.nvim_win_get_width(target_win),
     win_height = vim.api.nvim_win_get_height(target_win),
+    screen_cols = vim.o.columns,
+    screen_rows = vim.o.lines,
     leftcol = view.leftcol,
     lines = lines,
     cursor = vim.api.nvim_win_get_cursor(target_win),
+    config = get_render_config(target_win),
   }
 end
 
