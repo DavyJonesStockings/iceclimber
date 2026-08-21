@@ -23,3 +23,24 @@ once you have the data parsed, you can move on to actually handling it:
 - pass data into event handler, have event handler decide where to send event info
 ** still not sure if data should be parsed all in one spot or if the functions
 parse the data as they need it (handler just reads the event type and forwards it?)
+
+
+****processing language****
+
+
+update 8.19.26
+we have the primitive working; our wow-factor (walking on the lines of the buffer) is now working. time for polish.
+big things that need polishing and work (roughly in order):
+- window focus + switching; why are there visual bugs with the rendering overlay? and the sprite seems to get all wonky--check how the window focusing is interacting with our renderer.
+- once that's fixed, we can expand functionality:
+	- set trigger barriers for screen scrolling and then send those commands to neovim over tcp.
+	- experiment with support for multiple buffers; this'll need some preemptive game design to decide how we want to handle this.
+- BUG: trying to run the program on an external monitor seems to break it. current behavior:
+	- :IceClimberStart doesn't actually trigger the renderer
+	- doesn't seem to trigger a state change for :IceClimberStatus, but still messes with window focusing (see next point)
+	- in order to regain control, you must type the stop command while moving mouse (similar trigger as the previously described bug)
+- game design: add condor feature for easier navigation and movement.
+- game design/BUG: for initial spawn, scan current platforms from left to right, top to bottom (orderered) and find the highest, furthest left place the sprite can stand without being inside of a platform
+- game design/BUG: we NEED to fix them fuckass hitboxes. change position tracking to be the absolute center of the sprite and then get rid of as much empty outlining in the hurtbox as possible
+- also, let's try and handle window borders the same way we handle platform collisions; the sprite should stop running after hitting a wall, and it should also drop immediately after hitting a cieling mid jump.
+- oh and i guess some of the intended functionality: add implementation for zh/zl/zj/zk commands. shouldn't be too much work, just have a function in renderer.go that does boundary checks each frame and then sends scroll command + halts the sprites x/y velocity WITHOUT GOING TO IDLE 
