@@ -27,6 +27,10 @@ function M.connect(host, port, on_connect, on_command_cb)
             end)
           end
         end
+      else
+        vim.schedule(function()
+          require("iceclimber").stop()
+        end)
       end
     end)
     vim.schedule(on_connect)

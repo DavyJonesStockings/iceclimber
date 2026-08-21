@@ -1,7 +1,5 @@
 local M = {}
 
-local saved_win_opts = {}
-
 local target_win = nil
 local target_buf = nil
 local events = require("iceclimber.events")
@@ -15,14 +13,6 @@ local function get_render_config(win)
   return {
     gutter_left = wininfo and wininfo.textoff or 0,
   }
-end
-
-local function restore_view(win)
-  local saved = saved_win_opts[win]
-  if saved then
-    vim.wo[win].wrap = saved.wrap
-    saved_win_opts[win] = nil
-  end
 end
 
 local function get_visible_state()
@@ -93,9 +83,6 @@ end
 
 function M.stop()
   vim.api.nvim_clear_autocmds({ group = "IceClimberWatcher" })
-  for win, _ in pairs(saved_win_opts) do
-    if vim.api.nvim_win_is_valid(win) then restore_view(win) end
-  end
 end
 
 return M

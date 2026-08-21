@@ -10,6 +10,9 @@ local handlers = {
   cursor_move = function(cmd)
     vim.api.nvim_win_set_cursor(0, { cmd.line, cmd.col })
   end,
+  goodbye = function(_)
+    require("iceclimber").stop()
+  end,
 }
 
 function M.dispatch(cmd)

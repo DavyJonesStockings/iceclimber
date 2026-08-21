@@ -26,13 +26,20 @@ func main() {
 	})
 
 	if !*standalone {
-		go tcp.Start(func(event tcp.Event) {
+		go func() {
+			s := tcp.Start(func(event tcp.Event) {
+				glib.IdleAdd(func() {
+					if r != nil {
+						r.HandleEvent(event)
+					}
+				})
+			})
 			glib.IdleAdd(func() {
 				if r != nil {
-					r.HandleEvent(event)
+					r.SetServer(s)
 				}
 			})
-		})
+		}()
 	}
 
 	os.Exit(app.Run(os.Args[:1]))

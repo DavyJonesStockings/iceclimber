@@ -19,8 +19,8 @@ type Canvas struct {
 } // this is the full screen surface that we draw onto
 
 type Cell struct {
-	width  uint16
-	height uint16
+	width  float64
+	height float64
 }
 
 func NewCanvas() *Canvas {
@@ -86,12 +86,17 @@ func GetTerminalCell(pid int) *Cell {
 		panic(err)
 	}
 
-	// TODO: fix this. these values are the total number
-	// of rows and columns, it should be the actual pixel
-	// values for one cell.
+	if ws.Xpixel == 0 || ws.Ypixel == 0 || ws.Row == 0 || ws.Col == 0 {
+		return nil
+	}
+
+	scale, err := focusedMonitorScale()
+	if err != nil || scale == 0 {
+		scale = 1
+	}
 	return &Cell{
-		width:  ws.Col,
-		height: ws.Row,
+		width:  float64(ws.Xpixel) / float64(ws.Col) / scale,
+		height: float64(ws.Ypixel) / float64(ws.Row) / scale,
 	}
 }
 

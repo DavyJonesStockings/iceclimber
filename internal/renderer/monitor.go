@@ -36,3 +36,24 @@ func usableScreenSize() (int, int, error) {
 
 	return 0, 0, fmt.Errorf("no focused monitor found")
 }
+
+func focusedMonitorScale() (float64, error) {
+	out, err := exec.Command("hyprctl", "monitors", "-j").Output()
+	if err != nil {
+		return 1, err
+	}
+
+	var monitors []hyprMonitor
+	if err := json.Unmarshal(out, &monitors); err != nil {
+		return 1, err
+	}
+
+	for _, m := range monitors {
+		if m.Focused {
+			return m.Scale, nil
+		}
+	}
+
+	return 1, fmt.Errorf("no focused monitor found")
+
+}

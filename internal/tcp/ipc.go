@@ -1,7 +1,16 @@
 package tcp
 
+// we receive events and dispatch commands; see below
+
+// these flow from neovim to go
 const (
 	EventTypeState = "state"
+	EventTypeHello = "hello"
+)
+
+// these flow from go to neovim
+const (
+	CommandGoodbye = "goodbye"
 )
 
 type Line struct {
@@ -15,6 +24,7 @@ type RenderConfig struct {
 
 type Event struct {
 	Type       string       `json:"type"`
+	Pid        int          `json:"pid,omitempty"`
 	Top        int          `json:"top"`
 	Bot        int          `json:"bot"`
 	WinWidth   int          `json:"win_width"`

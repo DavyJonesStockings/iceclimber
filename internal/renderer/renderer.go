@@ -36,6 +36,11 @@ type Renderer struct {
 	targetWindowAddr string
 	clearInput       func()
 	hasFocus         bool
+	nvimPid          int
+	realCellWidth    float64
+	realCellHeight   float64
+	letterX, letterY float64
+	server           *tcp.Server
 }
 
 func New(app *gtk.Application) *Renderer {
@@ -144,6 +149,9 @@ func New(app *gtk.Application) *Renderer {
 
 		// quit func
 		if pressedKeys[gdk.KEY_q] {
+			if r.server != nil {
+				r.server.SendCommand(tcp.Command{Type: tcp.CommandGoodbye})
+			}
 			win.Close()
 			return false
 		}
@@ -266,7 +274,7 @@ func (r *Renderer) StartFocusTracking() {
 	}
 }
 
-// for testing/debugging purposes, do not remove
+// visible platform overlay for testing/debugging purposes, do not remove
 func (r *Renderer) newPlatformOverlay() *gtk.DrawingArea {
 	area := gtk.NewDrawingArea()
 	area.SetSizeRequest(screenWidth, screenHeight)
@@ -389,18 +397,34 @@ func (r *Renderer) Show() {
 	r.win.SetVisible(true)
 }
 
+func (r *Renderer) SetServer(s *tcp.Server) {
+	r.server = s
+}
+
 func (r *Renderer) handleStateEvent(event tcp.Event) {
-	if event.WinWidth == 0 || event.WinHeight == 0 {
+	if event.WinWidth == 0 || event.WinHeight == 0 || event.ScreenCols == 0 || event.ScreenRows == 0 {
 		return
 	}
 
-	// the units for these variables is TERMINAL CELLS
-	cellWidth := float64(screenWidth) / float64(event.ScreenCols)
-	cellHeight := float64(screenHeight) / float64(event.ScreenRows)
+	var cellWidth, cellHeight, letterX, letterY float64
+
+	if r.realCellWidth > 0 && r.realCellHeight > 0 {
+		cellWidth, cellHeight = r.realCellWidth, r.realCellHeight
+		usedWidth := cellWidth * float64(event.ScreenCols)
+		usedHeight := cellHeight * float64(event.ScreenRows)
+		letterX = (float64(screenWidth) - usedWidth) / 2
+		letterY = (float64(screenHeight) - usedHeight) / 2
+	} else {
+		cellWidth = float64(screenWidth) / float64(event.ScreenCols)
+		cellHeight = float64(screenHeight) / float64(event.ScreenRows)
+	}
+
+	fmt.Printf("iceclimber: screenWH=%dx%d cols/rows=%d/%d cellWH=%.2f/%.2f letterXY=%.2f/%.2f\n",
+		screenWidth, screenHeight, event.ScreenCols, event.ScreenRows, cellWidth, cellHeight, letterX, letterY) // temp debu
 
 	gutterLeft := event.Config.GutterLeft
 	usableCols := event.WinWidth - gutterLeft
-	xOffset := float64(gutterLeft) * cellWidth
+	xOffset := float64(gutterLeft)*cellWidth + letterX
 
 	platforms := make([]*Platform, 0, len(event.Lines))
 	for i, line := range event.Lines {
@@ -413,7 +437,7 @@ func (r *Renderer) handleStateEvent(event tcp.Event) {
 			widthCells = usableCols
 		}
 
-		rowTop := float64(i) * cellHeight
+		rowTop := float64(i)*cellHeight + letterY
 		rowBottom := rowTop + cellHeight
 
 		platforms = append(platforms, NewPlatform(
@@ -429,9 +453,27 @@ func (r *Renderer) handleStateEvent(event tcp.Event) {
 
 }
 
+func (r *Renderer) handleHelloEvent(event tcp.Event) {
+	r.nvimPid = event.Pid
+	fmt.Println("iceclimber: hello received, pid =", r.nvimPid)
+
+	cell := GetTerminalCell(r.nvimPid)
+	if cell == nil {
+		log.Println("iceclimber: terminal did not report pixel geometry; falling back uncorrected math")
+		return
+	}
+
+	fmt.Println("iceclimber: real cell size from ioctl:", cell.width, cell.height)
+
+	r.realCellWidth = cell.width
+	r.realCellHeight = cell.height
+}
+
 func (r *Renderer) HandleEvent(event tcp.Event) {
 	// get ready for this function to become huge...
 	switch event.Type {
+	case tcp.EventTypeHello:
+		r.handleHelloEvent(event)
 	case tcp.EventTypeState:
 		r.handleStateEvent(event)
 	case "resume_focus":

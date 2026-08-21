@@ -2,6 +2,7 @@ local M = {}
 
 M.event = {
   state = "state",
+  hello = "hello",
 }
 
 M.command = {
