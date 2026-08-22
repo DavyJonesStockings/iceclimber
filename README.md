@@ -7,6 +7,8 @@ currently only works on Hyprland. sorry! more support to come in the future.
 `<space>` jump
 `q`       quit
 
+![demo](./demo.gif)
+
 ## WIP
 this project is **heavily** work-in-progress. to see a list of what i'm planning
 in the near future, check out `next.txt`!
