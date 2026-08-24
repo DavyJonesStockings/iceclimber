@@ -43,6 +43,48 @@ type Renderer struct {
 	server           *tcp.Server
 }
 
+// visible platform overlay for testing/debugging purposes, do not remove
+func (r *Renderer) newPlatformOverlay() *gtk.DrawingArea {
+	area := gtk.NewDrawingArea()
+	area.SetSizeRequest(screenWidth, screenHeight)
+	area.SetDrawFunc(func(a *gtk.DrawingArea, cr *cairo.Context, w, h int) {
+		cr.SetOperator(cairo.OperatorSource)
+		cr.SetSourceRGBA(0, 0, 0, 0)
+		cr.Rectangle(0, 0, float64(w), float64(h))
+		cr.Fill()
+		cr.SetSourceRGBA(1, 0, 1, 0.5)
+
+		for _, p := range r.platforms {
+			cr.Rectangle(
+				p.TopLeft.X, p.TopLeft.Y,
+				p.BottomRight.X-p.TopLeft.X,
+				p.BottomRight.Y-p.TopLeft.Y,
+			)
+			cr.Fill()
+		}
+	})
+	return area
+}
+
+func (r *Renderer) resumeFocus() {
+	r.win.SetVisible(false)
+	glib.TimeoutAdd(16, func() bool { // one frame later, after the hide actually commits
+		layerSetKeyboardOnDemand(&r.win.Window)
+		r.win.SetVisible(true)
+		r.hasFocus = true
+		return false // one-shot timer
+	})
+}
+
+func (r *Renderer) Show() {
+	r.win.SetVisible(true)
+}
+
+func (r *Renderer) SetServer(s *tcp.Server) {
+	r.server = s
+}
+
+// meat and potatoes
 func New(app *gtk.Application) *Renderer {
 	info, err := currentFocusedWindowInfo()
 	if err == nil {
@@ -274,29 +316,6 @@ func (r *Renderer) StartFocusTracking() {
 	}
 }
 
-// visible platform overlay for testing/debugging purposes, do not remove
-func (r *Renderer) newPlatformOverlay() *gtk.DrawingArea {
-	area := gtk.NewDrawingArea()
-	area.SetSizeRequest(screenWidth, screenHeight)
-	area.SetDrawFunc(func(a *gtk.DrawingArea, cr *cairo.Context, w, h int) {
-		cr.SetOperator(cairo.OperatorSource)
-		cr.SetSourceRGBA(0, 0, 0, 0)
-		cr.Rectangle(0, 0, float64(w), float64(h))
-		cr.Fill()
-		cr.SetSourceRGBA(1, 0, 1, 0.5)
-
-		for _, p := range r.platforms {
-			cr.Rectangle(
-				p.TopLeft.X, p.TopLeft.Y,
-				p.BottomRight.X-p.TopLeft.X,
-				p.BottomRight.Y-p.TopLeft.Y,
-			)
-			cr.Fill()
-		}
-	})
-	return area
-}
-
 // this function is "naive" about sprite height, but that's
 // acceptable due to resolveAnims handling it downstream
 // in the tick loop
@@ -381,24 +400,6 @@ func resolveAnims(sprite *Sprite, x, y float64) (float64, float64) {
 	}
 
 	return x, y
-}
-
-func (r *Renderer) resumeFocus() {
-	r.win.SetVisible(false)
-	glib.TimeoutAdd(16, func() bool { // one frame later, after the hide actually commits
-		layerSetKeyboardOnDemand(&r.win.Window)
-		r.win.SetVisible(true)
-		r.hasFocus = true
-		return false // one-shot timer
-	})
-}
-
-func (r *Renderer) Show() {
-	r.win.SetVisible(true)
-}
-
-func (r *Renderer) SetServer(s *tcp.Server) {
-	r.server = s
 }
 
 func (r *Renderer) handleStateEvent(event tcp.Event) {
