@@ -236,9 +236,11 @@ func New(app *gtk.Application) *Renderer {
 
 	win.SetChild(canvas.Widget())
 	win.ConnectMap(func() {
+		// start debug
 		overlay := r.newPlatformOverlay()
 		r.overlayArea = overlay
 		canvas.fixed.Put(overlay, 0, 0)
+		// end debug
 		r.StartFocusTracking()
 	})
 
