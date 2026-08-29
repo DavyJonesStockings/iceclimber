@@ -359,7 +359,7 @@ func resolvePlatforms(sprite *Sprite, platforms []*Platform, proposedX, proposed
 			continue
 		}
 		switch {
-		case sprite.Y+float64(sw) <= p.TopLeft.Y:
+		case sprite.Y+float64(sh) <= p.TopLeft.Y:
 			resY = p.TopLeft.Y - float64(sh)
 			sprite.velocityY = 0
 			sprite.grounded = true
