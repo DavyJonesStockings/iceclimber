@@ -15,13 +15,14 @@ import (
 
 func main() {
 	standalone := flag.Bool("standalone", false, "run without waiting for nvim tcp connect (for debugging)")
+	debug_overlay := flag.Bool("debug_overlay", false, "run with pink debug overlay (for debugging)")
 	flag.Parse()
 	app := gtk.NewApplication("iceclimber.app", gio.ApplicationFlagsNone)
 
 	var r *renderer.Renderer
 
 	app.ConnectActivate(func() {
-		r = renderer.New(app)
+		r = renderer.New(app, *debug_overlay)
 		r.Show()
 	})
 
