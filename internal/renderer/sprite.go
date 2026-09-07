@@ -91,6 +91,17 @@ func (s *Sprite) Size() (int, int) {
 	return f.Width(), f.Height()
 }
 
+// this is used when we need to get the state of an animation frame without
+// actually switching animation states. used for calculating future collisions.
+func (s *Sprite) SizeForState(state AnimationState) (int, int) {
+	frames := s.animations[state]
+	if len(frames) == 0 {
+		return s.Size()
+	}
+	f := frames[0]
+	return f.Width(), f.Height()
+}
+
 func (s *Sprite) draw(a *gtk.DrawingArea, cr *cairo.Context, width, height int) {
 	cr.SetOperator(cairo.OperatorSource)
 	cr.SetSourceRGBA(0, 0, 0, 0)

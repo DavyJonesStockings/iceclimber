@@ -117,7 +117,7 @@ func New(app *gtk.Application) *Renderer {
 	if err != nil {
 		panic(err)
 	}
-	canvas.AddSprite(sprite, 0, 0)
+	canvas.AddSprite(sprite, float64(screenWidth)/2, 0)
 
 	canvas.Start()
 
@@ -217,9 +217,8 @@ func New(app *gtk.Application) *Renderer {
 			}
 			sprite.SetFacing(false)
 		}
-		if pressedKeys[gdk.KEY_space] && sprite.grounded {
-			sprite.jumping = true
-			sprite.grounded = false
+		wantsJump := pressedKeys[gdk.KEY_space] && sprite.grounded
+		if wantsJump {
 			sprite.velocityY = -jumpHeight
 		}
 		sprite.velocityX = dx
@@ -232,7 +231,21 @@ func New(app *gtk.Application) *Renderer {
 		sprite.grounded = false // assume airborne each frame, resolvePlatforms will
 		// declare grounded and then later we check for the bottom of the screen
 
-		resX, resY := resolvePlatforms(sprite, r.platforms, proposedX, proposedY)
+		// first resolvePlatforms call decides if we can jump...
+		resX, resY, jumpAllowed := resolvePlatforms(sprite, r.platforms, proposedX, proposedY, wantsJump)
+
+		if wantsJump {
+			if jumpAllowed {
+				sprite.jumping = true
+			} else {
+				// if we can't jump, recompute the frame without the jump input
+				sprite.velocityY = 0
+				sprite.velocityY += dy
+				proposedY = sprite.Y + sprite.velocityY
+				sprite.grounded = false
+				resX, resY, _ = resolvePlatforms(sprite, r.platforms, proposedX, proposedY, false)
+			}
+		}
 
 		if resY >= float64(screenHeight-h) {
 			// using >= instead of == to negate any
@@ -320,11 +333,41 @@ func (r *Renderer) StartFocusTracking() {
 	}
 }
 
+// this function determines if jumping will result in the sprite immediately being
+// inside a platform (due to differing animation frame sizes)
+func canJump(sprite *Sprite, platforms []*Platform) bool {
+	oldW, oldH := sprite.Size()
+	newW, newH := sprite.SizeForState(StateJump)
+
+	x := sprite.X
+	if !sprite.facingLeft {
+		x += float64(oldW - newW)
+	}
+	y := sprite.Y + float64(oldH-newH)
+
+	left, right := x, x+float64(newW)
+	top, bottom := y, y+float64(newH)
+
+	for _, p := range platforms {
+		if right <= p.TopLeft.X || left >= p.BottomRight.X {
+			continue
+		}
+		if bottom <= p.TopLeft.Y || top >= p.BottomRight.Y {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 // this function is "naive" about sprite height, but that's
 // acceptable due to resolveAnims handling it downstream
 // in the tick loop
-func resolvePlatforms(sprite *Sprite, platforms []*Platform, proposedX, proposedY float64) (float64, float64) {
+func resolvePlatforms(sprite *Sprite, platforms []*Platform, proposedX, proposedY float64, jumping bool) (float64, float64, bool) {
 	sw, sh := sprite.Size()
+
+	moveDirX := sprite.velocityX
+	moveDirY := sprite.velocityY
 
 	resX := proposedX
 	top := sprite.Y
@@ -338,14 +381,22 @@ func resolvePlatforms(sprite *Sprite, platforms []*Platform, proposedX, proposed
 		if bottom <= p.TopLeft.Y || top >= p.BottomRight.Y {
 			continue
 		}
+
+		// push out toward whichever edge requires the smaller correction
+		leftPen := right - p.TopLeft.X
+		rightPen := p.BottomRight.X - left
 		switch {
-		case sprite.X+float64(sw) <= p.TopLeft.X:
+		case leftPen < rightPen:
 			resX = p.TopLeft.X - float64(sw)
-			sprite.velocityX = 0
-		case sprite.X >= p.BottomRight.X:
+		case rightPen < leftPen:
 			resX = p.BottomRight.X
-			sprite.velocityX = 0
+		case moveDirX >= 0:
+			// tie breaker fallback to direction of travel
+			resX = p.TopLeft.X - float64(sw)
+		default:
+			resX = p.BottomRight.X
 		}
+		sprite.velocityX = 0
 	}
 
 	resY := proposedY
@@ -360,18 +411,30 @@ func resolvePlatforms(sprite *Sprite, platforms []*Platform, proposedX, proposed
 		if bottom <= p.TopLeft.Y || top >= p.BottomRight.Y {
 			continue
 		}
+
+		topPen := bottom - p.TopLeft.Y
+		bottomPen := p.BottomRight.Y - top
 		switch {
-		case sprite.Y+float64(sh) <= p.TopLeft.Y:
+		case topPen < bottomPen:
 			resY = p.TopLeft.Y - float64(sh)
-			sprite.velocityY = 0
 			sprite.grounded = true
-		case sprite.Y >= p.BottomRight.Y:
+		case bottomPen < topPen:
 			resY = p.BottomRight.Y
-			sprite.velocityY = 0
+		case moveDirY >= 0:
+			resY = p.TopLeft.Y - float64(sh)
+			sprite.grounded = true
+		default:
+			resY = p.BottomRight.Y
 		}
+		sprite.velocityY = 0
 	}
 
-	return resX, resY
+	jumpAllowed := true
+	if jumping {
+		jumpAllowed = canJump(sprite, platforms)
+	}
+
+	return resX, resY, jumpAllowed
 }
 
 func resolveAnims(sprite *Sprite, x, y float64) (float64, float64) {
