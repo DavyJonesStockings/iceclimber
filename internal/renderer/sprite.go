@@ -68,7 +68,7 @@ func (s *Sprite) SetState(state AnimationState) {
 	}
 }
 
-func (s *Sprite) SetFacing(left bool) { s.facingLeft = left }
+func (s *Sprite) SetFacingLeft(left bool) { s.facingLeft = left }
 
 func (s *Sprite) Tick() {
 	frames := s.frames()

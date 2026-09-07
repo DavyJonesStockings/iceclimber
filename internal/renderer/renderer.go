@@ -207,7 +207,7 @@ func New(app *gtk.Application) *Renderer {
 			} else {
 				dx -= jumpstep
 			}
-			sprite.SetFacing(true)
+			sprite.SetFacingLeft(true)
 		}
 		if pressedKeys[gdk.KEY_l] {
 			if sprite.grounded {
@@ -215,7 +215,7 @@ func New(app *gtk.Application) *Renderer {
 			} else {
 				dx += jumpstep
 			}
-			sprite.SetFacing(false)
+			sprite.SetFacingLeft(false)
 		}
 		wantsJump := pressedKeys[gdk.KEY_space] && sprite.grounded
 		if wantsJump {
