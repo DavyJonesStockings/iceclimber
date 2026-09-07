@@ -9,7 +9,7 @@ function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 end
 
-function M.start()
+function M.start(opts)
   local win = vim.api.nvim_get_current_win()
   require("iceclimber.ui_lockdown").enable(win)
 
@@ -35,7 +35,7 @@ function M.start()
     require("iceclimber.socket").connect("127.0.0.1", 4545, on_connect, on_command)
   end
 
-  require("iceclimber.job").start(on_ready)
+  require("iceclimber.job").start(on_ready, opts)
 end
 
 function M.stop()
