@@ -20,7 +20,7 @@ var (
 )
 
 const (
-	moveTickMs = 15
+	moveTickMs = 12
 	gravity    = 0.25
 	step       = 4
 	jumpstep   = 2
@@ -85,7 +85,7 @@ func (r *Renderer) SetServer(s *tcp.Server) {
 }
 
 // meat and potatoes
-func New(app *gtk.Application) *Renderer {
+func New(app *gtk.Application, debug_overlay bool) *Renderer {
 	info, err := currentFocusedWindowInfo()
 	if err != nil {
 		log.Fatalf("unable to get focused window: %s", err)
@@ -294,9 +294,11 @@ func New(app *gtk.Application) *Renderer {
 	win.SetChild(canvas.Widget())
 	win.ConnectMap(func() {
 		// start debug
-		overlay := r.newPlatformOverlay()
-		r.overlayArea = overlay
-		canvas.fixed.Put(overlay, 0, 0)
+		if debug_overlay {
+			overlay := r.newPlatformOverlay()
+			r.overlayArea = overlay
+			canvas.fixed.Put(overlay, 0, 0)
+		}
 		// end debug
 		r.StartFocusTracking()
 	})
