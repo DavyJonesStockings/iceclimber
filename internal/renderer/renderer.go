@@ -20,7 +20,7 @@ var (
 )
 
 const (
-	moveTickMs = 10
+	moveTickMs = 15
 	gravity    = 0.25
 	step       = 4
 	jumpstep   = 2
@@ -87,10 +87,11 @@ func (r *Renderer) SetServer(s *tcp.Server) {
 // meat and potatoes
 func New(app *gtk.Application) *Renderer {
 	info, err := currentFocusedWindowInfo()
-	if err == nil {
-		screenWidth, screenHeight = info.Size[0], info.Size[1]
+	if err != nil {
+		log.Fatalf("unable to get focused window: %s", err)
 	}
 
+	screenWidth, screenHeight = info.Size[0], info.Size[1]
 	win := gtk.NewApplicationWindow(app)
 	win.SetDefaultSize(screenWidth, screenHeight)
 	win.SetDecorated(false)
@@ -101,10 +102,8 @@ func New(app *gtk.Application) *Renderer {
 	layerAnchorLeft(&win.Window, true)
 	layerAnchorTop(&win.Window, true)
 	layerSetExclusiveZoneIgnore(&win.Window)
-	if err == nil {
-		layerSetMarginLeft(&win.Window, info.At[0])
-		layerSetMarginTop(&win.Window, info.At[1])
-	}
+	layerSetMarginLeft(&win.Window, info.At[0])
+	layerSetMarginTop(&win.Window, info.At[1])
 	win.ConnectRealize(func() {
 		disableInputRegion(&win.Window)
 	})
@@ -192,7 +191,10 @@ func New(app *gtk.Application) *Renderer {
 		// quit func
 		if pressedKeys[gdk.KEY_q] {
 			if r.server != nil {
-				r.server.SendCommand(tcp.Command{Type: tcp.CommandGoodbye})
+				err := r.server.SendCommand(tcp.Command{Type: tcp.CommandGoodbye})
+				if err != nil {
+					log.Fatalf("failed to send command: %s", err)
+				}
 			}
 			win.Close()
 			return false
