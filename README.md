@@ -65,4 +65,4 @@ if you just want to test out the renderer without neovim at all, you can
 download the binary from the releases page and run it standalone with
 `./iceclimber --standalone`, which drops you into a default platform
 layout for easy testing.
-**AGAIN I WARN THIS ONLY WORKS ON ARCH LINUX WITH HYPRLAND**
+**AGAIN I WARN THIS ONLY WORKS ON HYPRLAND**
