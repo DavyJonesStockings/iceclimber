@@ -9,7 +9,10 @@ currently only works on Hyprland. sorry! more support to come in the future.
 ## requirements
 
 - Hyprland
+
+and some libraries...
 - gtk4
+- gtk4-layer-shell
 - gobject-introspection-runtime
 
 no pkgbuild yet, so you're on your own for getting those installed for now.
