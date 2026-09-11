@@ -9,8 +9,8 @@ import (
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 	// "github.com/msgpack-rpc/msgpack-rpc-go/rpc"
 
-	"iceclimber.app/internal/renderer"
-	"iceclimber.app/internal/tcp"
+	"iceclimber/internal/renderer"
+	"iceclimber/internal/tcp"
 )
 
 func main() {
