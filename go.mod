@@ -1,4 +1,4 @@
-module iceclimber.app
+module iceclimber
 
 go 1.26.4
 

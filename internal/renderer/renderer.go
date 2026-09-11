@@ -11,7 +11,7 @@ import (
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 
-	"iceclimber.app/internal/tcp"
+	"iceclimber/internal/tcp"
 )
 
 var (
