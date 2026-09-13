@@ -489,9 +489,6 @@ func (r *Renderer) handleStateEvent(event tcp.Event) {
 		cellHeight = float64(screenHeight) / float64(event.ScreenRows)
 	}
 
-	fmt.Printf("iceclimber: screenWH=%dx%d cols/rows=%d/%d cellWH=%.2f/%.2f letterXY=%.2f/%.2f\n",
-		screenWidth, screenHeight, event.ScreenCols, event.ScreenRows, cellWidth, cellHeight, letterX, letterY) // temp debu
-
 	gutterLeft := event.Config.GutterLeft
 	usableCols := event.WinWidth - gutterLeft
 	xOffset := float64(gutterLeft)*cellWidth + letterX
