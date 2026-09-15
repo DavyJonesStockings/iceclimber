@@ -30,7 +30,6 @@ func Start(cb func(Event)) *Server {
 	s := &Server{cb: cb, conn: conn}
 	go s.readLoop()
 	return s
-
 }
 
 func (s *Server) readLoop() {
