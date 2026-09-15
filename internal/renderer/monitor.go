@@ -55,5 +55,4 @@ func focusedMonitorScale() (float64, error) {
 	}
 
 	return 1, fmt.Errorf("no focused monitor found")
-
 }

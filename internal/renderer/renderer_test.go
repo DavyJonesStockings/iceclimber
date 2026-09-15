@@ -22,15 +22,18 @@ func TestResolveAnims(t *testing.T) {
 		velocityY  float64
 		want       wantResult
 	}{
-		{"idle_to_walk_facing_right", 100, 100, false, StateIdle,
+		{
+			"idle_to_walk_facing_right", 100, 100, false, StateIdle,
 			true, true, 0,
 			wantResult{100, 100, StateWalk},
 		},
-		{"idle_to_fall_facing_right", 100, 100, false, StateIdle,
+		{
+			"idle_to_fall_facing_right", 100, 100, false, StateIdle,
 			false, false, 1,
 			wantResult{84, 92, StateFall},
 		},
-		{"idle_to_fall_facing_left", 100, 100, true, StateIdle,
+		{
+			"idle_to_fall_facing_left", 100, 100, true, StateIdle,
 			false, false, 1,
 			wantResult{100, 92, StateFall},
 		},

@@ -440,7 +440,6 @@ func resolvePlatforms(sprite *Sprite, platforms []*Platform, proposedX, proposed
 }
 
 func resolveAnims(sprite *Sprite, x, y float64) (float64, float64) {
-
 	oldW, oldH := sprite.Size()
 
 	var next AnimationState
@@ -517,7 +516,6 @@ func (r *Renderer) handleStateEvent(event tcp.Event) {
 	if r.overlayArea != nil {
 		r.overlayArea.QueueDraw()
 	}
-
 }
 
 func (r *Renderer) handleHelloEvent(event tcp.Event) {
