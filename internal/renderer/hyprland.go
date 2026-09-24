@@ -76,5 +76,10 @@ func watchFocus(cb func(windowAddress string)) error {
 }
 
 func focusWindow(address string) error {
-	return exec.Command("hyprctl", "dispatch", "focuswindow", "address:"+address).Run()
+	return exec.Command("hyprctl", "dispatch", "focuswindow", "address:"+address).Run() //gosec:disable G204
+	// REASON: exec.Command doesn't invoke the shell, the only real risk of an injected value is... focusing the
+	// wrong window, which isn't impactful for a malicious actor given that iceclimber still
+	// eats all the rest of their inputs. even so, address comes from another hyprctl call in our use case;
+	//     hyprctl activewindow -j
+	// there's next to no risk of an injection happening in the first place.
 }
