@@ -186,7 +186,7 @@ func New(app *gtk.Application, debug_overlay bool) *Renderer {
 	glib.TimeoutAdd(moveTickMs, func() bool {
 		// start := time.Now()
 		dx, dy = 0, gravity
-		_, h := sprite.Size()
+		sw, h := sprite.Size()
 
 		// quit func
 		if pressedKeys[gdk.KEY_q] {
@@ -247,12 +247,29 @@ func New(app *gtk.Application, debug_overlay bool) *Renderer {
 			}
 		}
 
+		// screen boundaries. position is clamped here and velocity is zeroed so
+		// the sprite drops immediately after hitting the ceiling and stops
+		// "walking" in place against a wall. Canvas.MoveSprite also clamps
+		// position as a backstop for the resolveAnims size shift below.
 		if resY >= float64(screenHeight-h) {
 			// using >= instead of == to negate any
 			// floating point errors
 			resY = float64(screenHeight - h)
 			sprite.grounded = true
 			sprite.velocityY = 0
+		}
+		if resY < 0 {
+			resY = 0
+			if sprite.velocityY < 0 {
+				sprite.velocityY = 0
+			}
+		}
+		if resX < 0 {
+			resX = 0
+			sprite.velocityX = 0
+		} else if resX > float64(screenWidth-sw) {
+			resX = float64(screenWidth - sw)
+			sprite.velocityX = 0
 		}
 
 		// set action states
