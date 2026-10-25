@@ -40,6 +40,8 @@ type Event struct {
 const (
 	CommandScrollLeft  = "scroll_left"
 	CommandScrollRight = "scroll_right"
+	CommandScrollUp    = "scroll_up"
+	CommandScrollDown  = "scroll_down"
 	CommandCursorMove  = "cursor_move"
 )
 
