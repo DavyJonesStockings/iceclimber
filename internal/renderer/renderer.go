@@ -287,6 +287,12 @@ func New(app *gtk.Application, debug_overlay bool) *Renderer {
 		resX, resY = resolveAnims(sprite, resX, resY)
 
 		if dx != 0 || dy != 0 {
+			if r.nvimPid != 0 {
+				resX, resY, err = r.resolveMotionCommands(sprite, resX, resY)
+				if err != nil {
+					log.Fatalf("error sending motion commands: %s", err)
+				}
+			}
 			canvas.MoveSprite(sprite, resX, resY)
 		}
 		return true
@@ -487,6 +493,61 @@ func resolveAnims(sprite *Sprite, x, y float64) (float64, float64) {
 	return x, y
 }
 
+// checks the sprite's x and y position against the screen position,
+// then sends a motion command to neovim if applicable
+func (r *Renderer) resolveMotionCommands(sprite *Sprite, x, y float64) (float64, float64, error) {
+	resX, resY := x, y
+	horizontalBoundary := r.realCellWidth * 10
+	verticalBoundary := r.realCellWidth * 3
+
+	w, h := sprite.Size()
+
+	// right side
+	if float64(screenWidth)-horizontalBoundary < sprite.X+float64(w) {
+		err := r.server.SendCommand(
+			tcp.Command{Type: tcp.CommandScrollRight},
+		)
+		if err != nil {
+			return 0, 0, err
+		}
+		resX -= r.realCellWidth
+
+	} else if horizontalBoundary > sprite.X {
+		err := r.server.SendCommand(
+			tcp.Command{Type: tcp.CommandScrollLeft},
+		)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		resX += r.realCellWidth
+	}
+
+	// top
+	if float64(screenHeight)-verticalBoundary < sprite.Y+float64(h) {
+		err := r.server.SendCommand(
+			tcp.Command{Type: tcp.CommandScrollUp},
+		)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		resY -= r.realCellHeight
+
+	} else if verticalBoundary > sprite.Y {
+		err := r.server.SendCommand(
+			tcp.Command{Type: tcp.CommandScrollDown},
+		)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		resY += r.realCellHeight
+	}
+
+	return resX, resY, nil
+}
+
 func (r *Renderer) handleStateEvent(event tcp.Event) {
 	if event.WinWidth == 0 || event.WinHeight == 0 || event.ScreenCols == 0 || event.ScreenRows == 0 {
 		return
@@ -551,6 +612,7 @@ func (r *Renderer) handleHelloEvent(event tcp.Event) {
 	r.realCellHeight = cell.height
 }
 
+// this is for handling events *from* neovim, not for sending commands *to* neovim
 func (r *Renderer) HandleEvent(event tcp.Event) {
 	// get ready for this function to become huge...
 	switch event.Type {
