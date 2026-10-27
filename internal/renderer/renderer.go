@@ -93,6 +93,8 @@ func New(app *gtk.Application, debug_overlay bool) *Renderer {
 
 	screenWidth, screenHeight = info.Size[0], info.Size[1]
 	win := gtk.NewApplicationWindow(app)
+	win.AddCSSClass("iceclimber")
+	win.RemoveCSSClass("background")
 	win.SetDefaultSize(screenWidth, screenHeight)
 	win.SetDecorated(false)
 
@@ -300,18 +302,20 @@ func New(app *gtk.Application, debug_overlay bool) *Renderer {
 
 	css := gtk.NewCSSProvider()
 	css.LoadFromString(`
-		window { background: transparent; }
-		window.background, window.csd {
+		window.iceclimber {
+			background: none;
+			background-color: transparent;
 			box-shadow: none;
-			margin: 0;
 			border: none;
 			border-radius: 0;
+			margin: 0;
+			padding: 0;
 		}
 		`)
 	gtk.StyleContextAddProviderForDisplay(
 		gdk.DisplayGetDefault(),
 		css,
-		gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+		gtk.STYLE_PROVIDER_PRIORITY_USER+1,
 	)
 
 	win.SetChild(canvas.Widget())
